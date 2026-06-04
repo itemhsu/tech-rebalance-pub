@@ -1,0 +1,36 @@
+name: Test Email
+# 手動觸發：用已存的 EMAIL_PASSWORD secret 寄一封測試信給寄件人自己。
+# GUI 觸發此 workflow 後讀 run 結果顯示「正常/失敗」，使用者不必再輸入密碼。
+# 自包含（只用 Python stdlib SMTP），不需安裝引擎，快又穩。
+on:
+  workflow_dispatch:
+jobs:
+  test-email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Send test email (to self)
+        env:
+          EMAIL_SENDER:   ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        run: |
+          python - <<'PY'
+          import os, ssl, smtplib, sys
+          from email.mime.text import MIMEText
+          sender = (os.environ.get("EMAIL_SENDER") or "").strip()
+          pw     = (os.environ.get("EMAIL_PASSWORD") or "").strip()
+          if not sender or not pw:
+              print("❌ 缺 EMAIL_SENDER 或 EMAIL_PASSWORD"); sys.exit(1)
+          msg = MIMEText("這是一封測試信，代表你的 EMAIL_PASSWORD 設定正確。", "plain", "utf-8")
+          msg["Subject"] = "✅ Tech-Rebalance 測試信"
+          msg["From"] = sender
+          msg["To"] = sender
+          try:
+              with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as s:
+                  s.login(sender, pw)
+                  s.sendmail(sender, [sender], msg.as_string())
+              print("✅ 測試信已寄出給", sender); sys.exit(0)
+          except Exception as e:
+              print("❌ 寄信失敗：", e); sys.exit(1)
+          PY

@@ -1,0 +1,51 @@
+name: Daily rebalance (thin shell)
+on:
+  # 對帳通過前先「只手動觸發」；通過後取消下面 schedule 註解即啟用每日自動。
+  # schedule:
+  #   - cron: '15 21 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      dry_run: { description: 'dry-run（不下單）', type: boolean, default: true }
+      force:   { description: '強制再平衡（覆蓋頻率守門）', type: boolean, default: false }
+permissions:
+  contents: write
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    env:
+      TR_WORKDIR: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install engine (public repo, no token)
+        run: pip install "tech-rebalance @ git+https://github.com/itemhsu/tech-rebalance-pub@{version}"
+      - name: Run all accounts
+        env:
+          ACC1_ALPACA_KEY:    ${{ secrets.ACC1_ALPACA_KEY }}
+          ACC1_ALPACA_SECRET: ${{ secrets.ACC1_ALPACA_SECRET }}
+          ACC2_ALPACA_KEY:    ${{ secrets.ACC2_ALPACA_KEY }}
+          ACC2_ALPACA_SECRET: ${{ secrets.ACC2_ALPACA_SECRET }}
+          ACC3_ALPACA_KEY:    ${{ secrets.ACC3_ALPACA_KEY }}
+          ACC3_ALPACA_SECRET: ${{ secrets.ACC3_ALPACA_SECRET }}
+          EMAIL_SENDER:       ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD:     ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECIPIENT:    ${{ secrets.EMAIL_RECIPIENT }}
+          PAGES_TOKEN:        ${{ secrets.PAGES_TOKEN }}
+          FORCE_REBALANCE:    ${{ inputs.force }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            run-account --account all --dry-run
+          else
+            run-account --account all
+          fi
+      - name: Commit data
+        if: ${{ inputs.dry_run != true }}   # dry-run 不 commit（避免污染冪等守門）
+        run: |
+          git config user.name  "Daily Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet && exit 0
+          git commit -m "chore(daily): $(date -u +%Y-%m-%d)"
+          git pull --rebase --autostash -X theirs origin main
+          git push

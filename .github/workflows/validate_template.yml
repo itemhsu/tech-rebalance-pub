@@ -1,0 +1,26 @@
+name: Validate repo template
+# 守門：repo_template.json / templates/ / schema 任一變動就驗證，紅燈不能 merge。
+on:
+  push:
+    paths:
+      - "repo_template.json"
+      - "templates/**"
+      - "schemas/repo-template-schema-v1.json"
+      - "scripts/validate_repo_template.py"
+  pull_request:
+    paths:
+      - "repo_template.json"
+      - "templates/**"
+      - "schemas/repo-template-schema-v1.json"
+      - "scripts/validate_repo_template.py"
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install jsonschema
+      - name: Validate repo_template.json
+        run: python scripts/validate_repo_template.py

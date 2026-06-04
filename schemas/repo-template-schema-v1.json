@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "repo-template-schema-v1.json",
+  "title": "Repo Template Manifest",
+  "description": "宣告 Repo B 與 Dashboard 應有的檔案與各自的 policy（單一事實來源）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "repo_b", "dashboard"],
+  "properties": {
+    "version":   { "type": "string", "minLength": 1 },
+    "repo_b":    { "$ref": "#/$defs/entryList" },
+    "dashboard": { "$ref": "#/$defs/entryList" }
+  },
+  "$defs": {
+    "entryList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "policy"],
+      "properties": {
+        "path":   { "type": "string", "minLength": 1 },
+        "policy": { "enum": ["render", "placeholder", "protected"] },
+        "src":    { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if":   { "properties": { "policy": { "const": "render" } } },
+          "then": { "required": ["src"] }
+        },
+        {
+          "if":   { "properties": { "policy": { "enum": ["placeholder", "protected"] } } },
+          "then": { "not": { "required": ["src"] } }
+        }
+      ]
+    }
+  }
+}

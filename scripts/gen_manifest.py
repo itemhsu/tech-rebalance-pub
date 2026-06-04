@@ -41,6 +41,14 @@ def _strategies() -> list[str]:
 
 
 def _brokers() -> dict:
+    """嵌入「完整 broker spec」到 manifest（GUI 需要 auth.method、輸入欄位名、
+    account_discovery 等），而非有損摘要。
+
+    額外正規化兩個欄位給 GUI 直接用：
+      - environments：dict.keys() → list
+      - required_env：最終 secret 名（引擎 _source_map，單一事實來源）
+    保留原始 auth（含輸入欄位名 {PREFIX}_API_KEY 等）供 credential_inputs 使用。
+    """
     import run_account as ra
     out = {}
     for f in sorted(glob.glob(str(ROOT / "brokers" / "*.json"))):
@@ -49,13 +57,10 @@ def _brokers() -> dict:
             continue
         bid = name[:-5]
         spec = json.loads(Path(f).read_text(encoding="utf-8"))
-        # 必填 secret：用引擎自己的 _source_map（單一事實來源）
-        required_env = list(ra._source_map("{PREFIX}", bid).values())
-        out[bid] = {
-            "display_name": spec.get("display_name", bid),
-            "required_env": required_env,
-            "environments": list((spec.get("environments") or {}).keys()),
-        }
+        entry = dict(spec)                                   # 完整 spec（含 auth / account_discovery）
+        entry["environments"] = list((spec.get("environments") or {}).keys())
+        entry["required_env"] = list(ra._source_map("{PREFIX}", bid).values())
+        out[bid] = entry
     return out
 
 

@@ -1,0 +1,243 @@
+{
+  "manifest_version": "1",
+  "engine_version": "1.0.6",
+  "data_schema": "1.0",
+  "strategies": [
+    "bench_nasdaq100",
+    "bench_sp500",
+    "d2p2t6",
+    "d2p2t6_mom6m",
+    "d2p2t6_v3",
+    "mom_12m_t5",
+    "mom_3m_t10",
+    "mom_6m_t10",
+    "mom_6m_t20",
+    "mom_factor_monthly",
+    "mom_factor_weekly",
+    "tech100_mom_12m_t10",
+    "tech100_mom_3m_t10",
+    "tech100_mom_6m_t10",
+    "top10",
+    "top10_v3",
+    "top9psq",
+    "toprank_v3",
+    "us100_mom_12m_t10",
+    "us100_mom_3m_t10",
+    "us100_mom_6m_t10",
+    "weekly_top10"
+  ],
+  "brokers": {
+    "alpaca": {
+      "$schema": "broker-schema-v1.json",
+      "id": "alpaca",
+      "version": "1.0",
+      "display_name": "Alpaca Markets",
+      "country": "US",
+      "website": "https://alpaca.markets",
+      "integration": {
+        "type": "rest"
+      },
+      "auth": {
+        "method": "api_key_secret",
+        "required_env": [
+          "{PREFIX}_API_KEY",
+          "{PREFIX}_API_SECRET"
+        ],
+        "header_template": {
+          "APCA-API-KEY-ID": "{api_key}",
+          "APCA-API-SECRET-KEY": "{api_secret}"
+        }
+      },
+      "environments": [
+        "paper",
+        "live"
+      ],
+      "market_data": {
+        "data_url": "https://data.alpaca.markets",
+        "latest_bars_endpoint": "/v2/stocks/bars/latest",
+        "calendar_endpoint": "/v2/calendar",
+        "clock_endpoint": "/v2/clock"
+      },
+      "endpoints": {
+        "account": "/v2/account",
+        "positions": "/v2/positions",
+        "orders": "/v2/orders",
+        "order_by_id": "/v2/orders/{order_id}",
+        "cancel_all": "/v2/orders"
+      },
+      "request": {
+        "encoding": "json",
+        "field_map": {
+          "symbol": "symbol",
+          "qty": "qty",
+          "side": "side",
+          "order_type": "type",
+          "time_in_force": "time_in_force"
+        }
+      },
+      "response": {
+        "order_id_path": "id",
+        "order_status_path": "status",
+        "balance": {
+          "nav": "portfolio_value",
+          "cash": "cash",
+          "buying_power": "buying_power"
+        }
+      },
+      "capabilities": {
+        "fractional_shares": true,
+        "asset_classes": [
+          "us_equity",
+          "crypto"
+        ],
+        "order_types": [
+          "market",
+          "limit",
+          "stop",
+          "stop_limit",
+          "trailing_stop"
+        ],
+        "time_in_force": [
+          "day",
+          "gtc",
+          "opg",
+          "cls",
+          "ioc",
+          "fok"
+        ],
+        "extended_hours": true,
+        "min_order_value_usd": 1.0,
+        "commission_per_trade": 0.0
+      },
+      "market": {
+        "timezone": "America/New_York",
+        "open_time": "09:30",
+        "close_time": "16:00",
+        "currency": "USD"
+      },
+      "rate_limits": {
+        "requests_per_minute": 200,
+        "orders_per_second": 10
+      },
+      "required_env": [
+        "{PREFIX}_ALPACA_KEY",
+        "{PREFIX}_ALPACA_SECRET"
+      ]
+    },
+    "tradier": {
+      "$schema": "broker-schema-v2.json",
+      "id": "tradier",
+      "version": "1.0",
+      "display_name": "Tradier Brokerage",
+      "country": "US",
+      "website": "https://tradier.com",
+      "integration": {
+        "type": "rest"
+      },
+      "auth": {
+        "method": "bearer_token",
+        "required_env": [
+          "{PREFIX}_API_KEY",
+          "{PREFIX}_ACCOUNT_ID"
+        ],
+        "header_template": {
+          "Authorization": "Bearer {api_key}"
+        }
+      },
+      "environments": [
+        "sandbox",
+        "live"
+      ],
+      "market_data": {
+        "quotes_endpoint": "/markets/quotes",
+        "clock_endpoint": "/markets/clock",
+        "calendar_endpoint": "/markets/calendar"
+      },
+      "endpoints": {
+        "profile": "/user/profile",
+        "balances": "/accounts/{account_id}/balances",
+        "positions": "/accounts/{account_id}/positions",
+        "orders": "/accounts/{account_id}/orders",
+        "order_by_id": "/accounts/{account_id}/orders/{order_id}"
+      },
+      "account_discovery": {
+        "endpoint": "/user/profile",
+        "account_id_path": "profile.account.account_number"
+      },
+      "request": {
+        "encoding": "form",
+        "field_map": {
+          "symbol": "symbol",
+          "qty": "quantity",
+          "side": "side",
+          "order_type": "type",
+          "time_in_force": "duration"
+        },
+        "constants": {
+          "class": "equity"
+        }
+      },
+      "response": {
+        "order_id_path": "order.id",
+        "order_status_path": "order.status",
+        "positions_path": "positions.position",
+        "quote_list_path": "quotes.quote",
+        "quote_symbol_field": "symbol",
+        "quote_price_field": "last",
+        "balance": {
+          "nav": "balances.total_equity",
+          "cash": "balances.total_cash",
+          "buying_power": "balances.total_cash"
+        },
+        "position_fields": {
+          "qty": "quantity",
+          "avg_entry_price": "cost_basis",
+          "symbol": "symbol"
+        }
+      },
+      "value_maps": {
+        "side": {
+          "buy": "buy",
+          "sell": "sell"
+        },
+        "time_in_force": {
+          "day": "day",
+          "gtc": "gtc"
+        }
+      },
+      "capabilities": {
+        "fractional_shares": false,
+        "asset_classes": [
+          "us_equity"
+        ],
+        "order_types": [
+          "market",
+          "limit",
+          "stop",
+          "stop_limit"
+        ],
+        "time_in_force": [
+          "day",
+          "gtc"
+        ],
+        "extended_hours": false,
+        "min_order_value_usd": 0.0,
+        "commission_per_trade": 0.0
+      },
+      "market": {
+        "timezone": "America/New_York",
+        "open_time": "09:30",
+        "close_time": "16:00",
+        "currency": "USD"
+      },
+      "rate_limits": {
+        "requests_per_minute": 120,
+        "orders_per_second": 5
+      },
+      "required_env": [
+        "{PREFIX}_API_KEY",
+        "{PREFIX}_ACCOUNT_ID"
+      ]
+    }
+  }
+}

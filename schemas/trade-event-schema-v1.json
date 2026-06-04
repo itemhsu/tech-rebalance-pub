@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "trade-event-schema-v1.json",
+  "title": "trade_events.jsonl — 單一事件（NDJSON 每行）",
+  "description": "type 用 pattern 鎖命名慣例但不 enum 限定，允許未來新增 ORDER_*/REBALANCE_* 事件。",
+  "type": "object",
+  "required": ["ts", "type", "account", "strategy"],
+  "additionalProperties": true,
+  "properties": {
+    "ts":       { "type": "string", "minLength": 1 },
+    "type":     { "type": "string", "pattern": "^(ORDER_|REBALANCE_)[A-Z_]+$" },
+    "account":  { "type": "string", "minLength": 1 },
+    "strategy": { "type": "string", "minLength": 1 },
+    "symbol":   { "type": "string" },
+    "action":   { "type": "string" }
+  }
+}

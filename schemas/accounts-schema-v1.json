@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "accounts-schema-v1.json",
+  "title": "accounts.json — 帳戶清單（寬鬆：require 核心、允許未來欄位）",
+  "type": "object",
+  "required": ["accounts"],
+  "additionalProperties": true,
+  "properties": {
+    "accounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "strategy"],
+        "additionalProperties": true,
+        "properties": {
+          "id":       { "type": "string", "minLength": 1 },
+          "strategy": { "type": "string", "minLength": 1 },
+          "label":    { "type": "string" },
+          "enabled":  { "type": "boolean" },
+          "broker":   { "type": "string" },
+          "secret_prefix": { "type": "string" },
+          "data_dir": { "type": "string" }
+        }
+      }
+    }
+  }
+}

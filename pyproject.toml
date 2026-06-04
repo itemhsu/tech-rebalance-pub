@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tech-rebalance"
+version = "1.0.6"
+description = "JSON-driven 多策略多帳戶自動再平衡引擎（Alpaca / Tradier）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "itemhsu" }]
+dependencies = [
+  "alpaca-py>=0.26.0",
+  "requests>=2.31.0",
+  "python-dotenv>=1.0.0",
+  "yfinance>=0.2.0",
+  "pandas>=1.5.0",
+  "numpy>=1.23.0",
+  "jsonschema>=4.17.0",
+  "ta>=0.10.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-cov>=5.0.0", "responses>=0.25.0"]
+
+[project.scripts]
+# pip 安裝後可直接用 `run-account --account all`（兩 repo 架構：Repo B 的薄 workflow 呼叫）
+run-account = "run_account:main"
+
+[tool.setuptools]
+# flat layout：根層模組 + engine/ brokers/ 套件 + 內建資產
+py-modules = [
+  "runner", "run_account", "trader", "portfolio", "market_cap",
+  "trade_log", "logger", "dashboard", "email_report", "harvest",
+  "market_state", "universe",
+]
+
+[tool.setuptools.packages.find]
+# strategies/ schemas/ data/ 加了 __init__.py 當套件標記，純粹為了讓資產進 wheel
+include = ["engine*", "brokers*", "strategies*", "schemas*", "data*"]
+
+[tool.setuptools.package-data]
+# 引擎自帶資產隨 wheel 打包（package_root()/<pkg>/... 在安裝後也定位得到）
+brokers = ["*.json"]
+strategies = ["*.json"]
+schemas = ["*.json"]
+# data/ 只包「引擎參考資料」兩檔；使用者 state（portfolio_state 等）不進 wheel
+data = ["universe.json", "shares_outstanding.json"]

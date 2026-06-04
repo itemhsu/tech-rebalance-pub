@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "shares-outstanding-schema-v1.json",
+  "title": "data/shares_outstanding.json — 流通股數",
+  "type": "object",
+  "required": ["shares"],
+  "additionalProperties": true,
+  "properties": {
+    "shares": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "last_updated": { "type": "string" },
+    "source": { "type": "string" },
+    "note":   { "type": "string" }
+  }
+}

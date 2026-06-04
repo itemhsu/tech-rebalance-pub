@@ -1,0 +1,160 @@
+{
+  "$schema": "https://itemhsu.github.io/tech-rebalance/strategies/strategy-schema-v1.json",
+  "id": "d2p2t6",
+  "version": "1.1",
+  "meta": {
+    "name": "D2P2T6",
+    "description": "軍火×2 + 醫藥×2 + 科技×6 = 10 檔等權重，每日再平衡",
+    "author": "itemhsu",
+    "created_at": "2024-03-01",
+    "tags": [
+      "多元分散",
+      "軍火",
+      "醫藥",
+      "科技",
+      "美股"
+    ],
+    "benchmark": "QQQ"
+  },
+  "universe": {
+    "type": "grouped",
+    "groups": [
+      {
+        "id": "defense",
+        "label": "🛡️ 軍火",
+        "source": {
+          "type": "inline",
+          "symbols": [
+            "LMT",
+            "RTX",
+            "NOC",
+            "GD",
+            "HII",
+            "LHX",
+            "LDOS",
+            "TDG",
+            "TXT",
+            "CW"
+          ]
+        }
+      },
+      {
+        "id": "pharma",
+        "label": "💊 醫藥",
+        "source": {
+          "type": "inline",
+          "symbols": [
+            "JNJ",
+            "PFE",
+            "MRK",
+            "LLY",
+            "AMGN",
+            "BMY",
+            "GILD",
+            "ABT",
+            "BIIB",
+            "REGN"
+          ]
+        }
+      },
+      {
+        "id": "tech",
+        "label": "💻 科技",
+        "source": {
+          "type": "inline",
+          "symbols": [
+            "AAPL",
+            "MSFT",
+            "NVDA",
+            "GOOGL",
+            "META",
+            "AMZN",
+            "TSLA",
+            "ORCL",
+            "AMD",
+            "AVGO"
+          ]
+        }
+      }
+    ]
+  },
+  "selection": {
+    "method": "top_n_per_group",
+    "metric": "market_cap",
+    "group_quotas": {
+      "defense": 2,
+      "pharma": 2,
+      "tech": 6
+    }
+  },
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 10,
+    "min_weight_pct": 5.0,
+    "max_weight_pct": 30.0,
+    "cash_buffer_pct": 2.0,
+    "custom_weights": null
+  },
+  "rebalancing": {
+    "frequency": "daily",
+    "trigger": {
+      "type": "any",
+      "conditions": [
+        {
+          "kind": "composition_change"
+        },
+        {
+          "kind": "weight_drift",
+          "threshold_pct": 3.0
+        }
+      ]
+    },
+    "min_trade_value_usd": 50,
+    "order_type": "market",
+    "sell_before_buy": true
+  },
+  "risk": {
+    "max_single_position_pct": 20.0,
+    "min_positions": 5,
+    "allow_fractional_shares": true
+  },
+  "dashboard": {
+    "title": "D2P2T6 Dashboard",
+    "subtitle": "軍火×2 + 醫藥×2 + 科技×6 = 10 檔等權重",
+    "accent_color": "#6366f1",
+    "portfolio_label": "D2P2T6 組合",
+    "rankings": {
+      "type": "universe_groups",
+      "title": "三大宇宙即時排名",
+      "show_top_n_per_group": 5,
+      "group_labels": {
+        "defense": "🛡️ 軍火 TOP5",
+        "pharma": "💊 醫藥 TOP5",
+        "tech": "💻 科技 TOP10"
+      }
+    },
+    "extra_sections": [
+      {
+        "type": "portfolio_badges",
+        "title": "本月 D2P2T6 組合"
+      }
+    ]
+  },
+  "email": {
+    "subject_template": "[D2P2T6 #{account_id}] {date} NAV ${nav:,.0f} ({today_change_pct:+.2f}%)",
+    "recipients_env": "EMAIL_RECIPIENTS",
+    "sections": [
+      "header",
+      "kpi",
+      "strategy_card",
+      "portfolio_badges",
+      "positions_table",
+      "rankings",
+      "today_events",
+      "harvest_plan",
+      "trades",
+      "cta",
+      "footer"
+    ]
+  }
+}

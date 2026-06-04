@@ -1,0 +1,281 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "strategy-schema-v1.json",
+  "title": "Strategy Definition Schema v1",
+  "type": "object",
+  "required": ["$schema", "id", "version", "meta", "universe", "selection", "portfolio", "rebalancing", "risk", "dashboard", "email"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Unique strategy identifier (lowercase, underscores)"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "meta": {
+      "type": "object",
+      "required": ["name", "description", "author", "created_at"],
+      "additionalProperties": false,
+      "properties": {
+        "name":        { "type": "string" },
+        "description": { "type": "string" },
+        "author":      { "type": "string" },
+        "created_at":  { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "tags":        { "type": "array", "items": { "type": "string" } },
+        "benchmark":   { "type": "string" }
+      }
+    },
+    "universe": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "single" },
+            "source": { "$ref": "#/definitions/universe_source" }
+          },
+          "required": ["type", "source"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": { "const": "grouped" },
+            "groups": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["id", "label", "source"],
+                "additionalProperties": false,
+                "properties": {
+                  "id":     { "type": "string" },
+                  "label":  { "type": "string" },
+                  "source": { "$ref": "#/definitions/universe_source" }
+                }
+              }
+            }
+          },
+          "required": ["type", "groups"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "selection": {
+      "type": "object",
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["top_n_by_metric", "top_n_per_group", "momentum_percentile", "factor_score"]
+        }
+      },
+      "if": { "properties": { "method": { "const": "top_n_by_metric" } } },
+      "then": {
+        "required": ["metric", "n"],
+        "properties": {
+          "method":          { "const": "top_n_by_metric" },
+          "metric":          { "$ref": "#/definitions/metric" },
+          "n":               { "type": "integer", "minimum": 1 },
+          "min_price":       { "type": "number", "minimum": 0 },
+          "lookback_days":   { "type": "integer", "minimum": 1 },
+          "exclude_symbols": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      },
+      "else": {
+        "if": { "properties": { "method": { "const": "top_n_per_group" } } },
+        "then": {
+          "required": ["metric", "group_quotas"],
+          "properties": {
+            "method":       { "const": "top_n_per_group" },
+            "metric":       { "$ref": "#/definitions/metric" },
+            "group_quotas": {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 1 }
+            }
+          },
+          "additionalProperties": false
+        },
+        "else": {
+          "if": { "properties": { "method": { "const": "factor_score" } } },
+          "then": {
+            "required": ["factors", "n"],
+            "properties": {
+              "method":  { "const": "factor_score" },
+              "factors": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["metric", "weight"],
+                  "properties": {
+                    "metric": { "$ref": "#/definitions/metric" },
+                    "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+                  }
+                }
+              },
+              "n": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "portfolio": {
+      "type": "object",
+      "required": ["weighting", "target_n"],
+      "additionalProperties": false,
+      "properties": {
+        "weighting":       { "type": "string", "enum": ["equal", "market_cap", "factor_score", "custom"] },
+        "target_n":        { "type": "integer", "minimum": 1 },
+        "min_weight_pct":  { "type": "number", "minimum": 0, "maximum": 100 },
+        "max_weight_pct":  { "type": "number", "minimum": 0, "maximum": 100 },
+        "cash_buffer_pct": { "type": "number", "minimum": 0, "maximum": 50 },
+        "custom_weights":  {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } }
+          ]
+        }
+      }
+    },
+    "rebalancing": {
+      "type": "object",
+      "required": ["frequency", "trigger", "order_type"],
+      "additionalProperties": false,
+      "properties": {
+        "frequency":           { "type": "string", "enum": ["daily", "weekly", "monthly"] },
+        "rebalance_on":        { "type": "string", "enum": ["first_trading_day", "last_trading_day"] },
+        "trigger": {
+          "type": "object",
+          "required": ["type", "conditions"],
+          "additionalProperties": false,
+          "properties": {
+            "type": { "type": "string", "enum": ["any", "all"] },
+            "conditions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["kind"],
+                "properties": {
+                  "kind":          { "type": "string", "enum": ["composition_change", "weight_drift", "scheduled"] },
+                  "threshold_pct": { "type": "number", "minimum": 0 }
+                }
+              }
+            }
+          }
+        },
+        "min_trade_value_usd": { "type": "number", "minimum": 0 },
+        "order_type":          { "type": "string", "enum": ["market", "limit"] },
+        "sell_before_buy":     { "type": "boolean" }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "required": ["max_single_position_pct", "min_positions"],
+      "additionalProperties": false,
+      "properties": {
+        "max_single_position_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "min_positions":           { "type": "integer", "minimum": 1 },
+        "halt_on_nav_drop_pct":    { "type": "number", "minimum": 0, "maximum": 100 },
+        "halt_lookback_days":      { "type": "integer", "minimum": 1 },
+        "allow_fractional_shares": { "type": "boolean" }
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "required": ["title", "accent_color", "portfolio_label", "rankings"],
+      "additionalProperties": false,
+      "properties": {
+        "title":           { "type": "string" },
+        "subtitle":        { "type": "string" },
+        "accent_color":    { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "portfolio_label": { "type": "string" },
+        "rankings": {
+          "type": "object",
+          "required": ["type", "title"],
+          "properties": {
+            "type":  { "type": "string", "enum": ["market_cap_list", "universe_groups"] },
+            "title": { "type": "string" },
+            "show_top_n":          { "type": "integer", "minimum": 1 },
+            "show_top_n_per_group":{ "type": "integer", "minimum": 1 },
+            "group_labels":        { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        },
+        "extra_sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type":  { "type": "string" },
+              "title": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "email": {
+      "type": "object",
+      "required": ["subject_template", "recipients_env", "sections"],
+      "additionalProperties": false,
+      "properties": {
+        "subject_template":      { "type": "string" },
+        "recipients_env":        { "type": "string" },
+        "sections":              { "type": "array", "items": { "type": "string" } },
+        "sections_rebalance_day":{ "type": "array", "items": { "type": "string" } },
+        "sections_normal_day":   { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "definitions": {
+    "universe_source": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "properties": {
+            "type":           { "const": "csv_file" },
+            "path":           { "type": "string" },
+            "symbol_column":  { "type": "string" }
+          },
+          "required": ["type", "path", "symbol_column"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type":    { "const": "inline" },
+            "symbols": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["type", "symbols"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type": { "const": "json_file" },
+            "path": { "type": "string" },
+            "key":  { "type": "string" }
+          },
+          "required": ["type", "path", "key"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "metric": {
+      "type": "string",
+      "enum": [
+        "market_cap",
+        "price_momentum_1m",
+        "price_momentum_3m",
+        "price_momentum_12m",
+        "revenue_growth_yoy",
+        "dividend_yield"
+      ]
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://itemhsu.github.io/tech-rebalance/strategies/strategy-schema-v1.json",
+  "id": "top10",
+  "version": "1.2",
+  "meta": {
+    "name": "科技股 TOP10",
+    "description": "前 10 大市值科技股，每日等權重再平衡",
+    "author": "itemhsu",
+    "created_at": "2024-01-15",
+    "tags": [
+      "科技",
+      "市值",
+      "美股"
+    ],
+    "benchmark": "QQQ"
+  },
+  "universe": {
+    "type": "single",
+    "source": {
+      "type": "json_file",
+      "path": "data/universe.json",
+      "key": "stocks"
+    }
+  },
+  "selection": {
+    "method": "top_n_by_metric",
+    "metric": "market_cap",
+    "n": 10,
+    "min_price": 5.0,
+    "exclude_symbols": []
+  },
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 10,
+    "min_weight_pct": 5.0,
+    "max_weight_pct": 30.0,
+    "cash_buffer_pct": 2.0,
+    "custom_weights": null
+  },
+  "rebalancing": {
+    "frequency": "monthly",
+    "rebalance_on": "first_trading_day",
+    "trigger": {
+      "type": "any",
+      "conditions": [
+        {
+          "kind": "scheduled"
+        }
+      ]
+    },
+    "min_trade_value_usd": 50,
+    "order_type": "market",
+    "sell_before_buy": true
+  },
+  "risk": {
+    "max_single_position_pct": 20.0,
+    "min_positions": 5,
+    "allow_fractional_shares": true
+  },
+  "dashboard": {
+    "title": "科技股 TOP10 Dashboard",
+    "subtitle": "前 10 大市值科技股 · 等權重 10%",
+    "accent_color": "#38bdf8",
+    "portfolio_label": "前10名持股",
+    "rankings": {
+      "type": "market_cap_list",
+      "title": "科技股市值排名",
+      "show_top_n": 20
+    },
+    "extra_sections": []
+  },
+  "email": {
+    "subject_template": "[TOP10 #{account_id}] {date} NAV ${nav:,.0f} ({today_change_pct:+.2f}%)",
+    "recipients_env": "EMAIL_RECIPIENTS",
+    "sections": [
+      "header",
+      "kpi",
+      "strategy_card",
+      "portfolio_badges",
+      "positions_table",
+      "rankings",
+      "today_events",
+      "trades",
+      "cta",
+      "footer"
+    ]
+  }
+}

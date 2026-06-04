@@ -1,0 +1,461 @@
+{
+  "$schema": "https://itemhsu.github.io/tech-rebalance/strategies/strategy-schema-v3.json",
+  "id": "toprank_ma_momentum",
+  "version": "1.0",
+  "schema_version": "3.0.0",
+  "meta": {
+    "name": "TopRank MA Momentum",
+    "description": "多因子加權百分位數選股 + MA/MACD 進場訊號 + ATR 停損追蹤，每週再平衡",
+    "author": "itemhsu",
+    "created_at": "2026-05-27",
+    "tags": [
+      "多因子",
+      "動能",
+      "MA交叉",
+      "ATR停損",
+      "美股"
+    ],
+    "benchmark": "SPY",
+    "asset_class": "equity",
+    "market": "US_STOCK"
+  },
+  "universe": {
+    "type": "exchange_filter",
+    "exchanges": [
+      "NASDAQ",
+      "NYSE"
+    ],
+    "exclude_sectors": [
+      "Financials",
+      "Utilities"
+    ],
+    "min_price": 5,
+    "min_market_cap": 2000000000,
+    "min_avg_volume_20d": 1000000,
+    "min_history_days": 260,
+    "max_candidates_before_filter": 2000
+  },
+  "selection": {
+    "method": "weighted_percentile",
+    "n": 8,
+    "watchlist_top_n": 20,
+    "min_score": 70
+  },
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 8,
+    "min_weight_pct": 5.0,
+    "max_weight_pct": 15.0,
+    "cash_buffer_pct": 10.0,
+    "custom_weights": null,
+    "allow_fractional_shares": true,
+    "min_order_value": 25
+  },
+  "rebalancing": {
+    "frequency": "weekly",
+    "day_of_week": "MON",
+    "time": "09:45:00",
+    "timezone": "America/New_York",
+    "trigger": {
+      "type": "any",
+      "conditions": [
+        {
+          "kind": "scheduled"
+        },
+        {
+          "kind": "entry_signal"
+        }
+      ]
+    },
+    "min_trade_value_usd": 25,
+    "order_type": "market",
+    "sell_before_buy": true,
+    "replace_if_rank_below": 30,
+    "allow_partial_rebalance": true,
+    "max_turnover_pct_per_rebalance": 0.5
+  },
+  "risk": {
+    "max_single_position_pct": 15.0,
+    "min_positions": 3,
+    "allow_fractional_shares": true,
+    "stop_loss_atr_multiple": 2.0,
+    "trailing_stop_pct": 0.1,
+    "take_profit_pct": 0.25,
+    "cooldown_after_stop_loss_days": 5,
+    "halt_new_entries_when_drawdown_pct_exceeds": 0.1,
+    "max_daily_loss_pct": 0.03,
+    "beta_limit": 2.0,
+    "volatility_limit_annualized": 0.45,
+    "max_symbol_gap_down_pct": 0.12
+  },
+  "execution": {
+    "broker": "alpaca",
+    "account_type": "paper",
+    "order_type": "market",
+    "time_in_force": "day",
+    "submit_after_market_open_minutes": 15,
+    "earnings_blackout_before_days": 2,
+    "earnings_blackout_after_days": 1,
+    "slippage_bps": 10,
+    "commission_bps": 0,
+    "retry": {
+      "max_attempts": 3,
+      "backoff_seconds": 5
+    }
+  },
+  "indicators": [
+    {
+      "name": "sma_20",
+      "type": "SMA",
+      "source": "adjusted_close",
+      "period": 20
+    },
+    {
+      "name": "sma_50",
+      "type": "SMA",
+      "source": "adjusted_close",
+      "period": 50
+    },
+    {
+      "name": "sma_200",
+      "type": "SMA",
+      "source": "adjusted_close",
+      "period": 200
+    },
+    {
+      "name": "ema_20",
+      "type": "EMA",
+      "source": "adjusted_close",
+      "period": 20
+    },
+    {
+      "name": "rsi_14",
+      "type": "RSI",
+      "source": "adjusted_close",
+      "period": 14
+    },
+    {
+      "name": "adx_14",
+      "type": "ADX",
+      "period": 14
+    },
+    {
+      "name": "atr_14",
+      "type": "ATR",
+      "period": 14
+    },
+    {
+      "name": "macd",
+      "type": "MACD",
+      "source": "adjusted_close",
+      "fast": 12,
+      "slow": 26,
+      "signal": 9,
+      "outputs": [
+        "macd_line",
+        "macd_signal",
+        "macd_histogram"
+      ]
+    },
+    {
+      "name": "avg_volume_20",
+      "type": "SMA",
+      "source": "volume",
+      "period": 20
+    }
+  ],
+  "derived_factors": [
+    {
+      "name": "momentum_20d",
+      "formula": "(adjusted_close - lag(adjusted_close, 20)) / lag(adjusted_close, 20)"
+    },
+    {
+      "name": "momentum_60d",
+      "formula": "(adjusted_close - lag(adjusted_close, 60)) / lag(adjusted_close, 60)"
+    },
+    {
+      "name": "momentum_90d",
+      "formula": "(adjusted_close - lag(adjusted_close, 90)) / lag(adjusted_close, 90)"
+    },
+    {
+      "name": "ma_gap_50",
+      "formula": "(adjusted_close - sma_50) / sma_50"
+    },
+    {
+      "name": "ma_slope_20_5d",
+      "formula": "(sma_20 - lag(sma_20, 5)) / lag(sma_20, 5)"
+    },
+    {
+      "name": "ma_slope_50_10d",
+      "formula": "(sma_50 - lag(sma_50, 10)) / lag(sma_50, 10)"
+    },
+    {
+      "name": "volume_ratio_20d",
+      "formula": "volume / avg_volume_20"
+    },
+    {
+      "name": "atr_pct",
+      "formula": "atr_14 / adjusted_close"
+    }
+  ],
+  "filters": {
+    "fundamental": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "revenue_growth_yoy",
+          "op": ">",
+          "value": 0.1
+        },
+        {
+          "field": "eps_ttm",
+          "op": ">",
+          "value": 0
+        },
+        {
+          "field": "roe",
+          "op": ">",
+          "value": 0.1
+        },
+        {
+          "field": "debt_to_equity",
+          "op": "<",
+          "value": 1.5
+        }
+      ]
+    },
+    "technical": {
+      "logic": "AND",
+      "conditions": [
+        {
+          "field": "adjusted_close",
+          "op": ">",
+          "value": "sma_50"
+        },
+        {
+          "field": "sma_50",
+          "op": ">",
+          "value": "sma_200"
+        },
+        {
+          "field": "rsi_14",
+          "op": "between",
+          "value": [
+            45,
+            70
+          ]
+        },
+        {
+          "field": "adx_14",
+          "op": ">",
+          "value": 20
+        },
+        {
+          "field": "volume_ratio_20d",
+          "op": ">",
+          "value": 1.0
+        },
+        {
+          "field": "atr_pct",
+          "op": "<",
+          "value": 0.08
+        }
+      ]
+    }
+  },
+  "ranking": {
+    "method": "weighted_percentile_score",
+    "normalization": {
+      "method": "cross_sectional_percentile",
+      "clip_percentiles": [
+        2,
+        98
+      ],
+      "handle_missing": "exclude_symbol"
+    },
+    "factors": [
+      {
+        "field": "momentum_90d",
+        "weight": 0.18,
+        "direction": "desc"
+      },
+      {
+        "field": "momentum_60d",
+        "weight": 0.08,
+        "direction": "desc"
+      },
+      {
+        "field": "ma_gap_50",
+        "weight": 0.12,
+        "direction": "desc"
+      },
+      {
+        "field": "ma_slope_20_5d",
+        "weight": 0.1,
+        "direction": "desc"
+      },
+      {
+        "field": "ma_slope_50_10d",
+        "weight": 0.08,
+        "direction": "desc"
+      },
+      {
+        "field": "macd_histogram",
+        "weight": 0.08,
+        "direction": "desc"
+      },
+      {
+        "field": "adx_14",
+        "weight": 0.08,
+        "direction": "desc"
+      },
+      {
+        "field": "volume_ratio_20d",
+        "weight": 0.07,
+        "direction": "desc"
+      },
+      {
+        "field": "roe",
+        "weight": 0.08,
+        "direction": "desc"
+      },
+      {
+        "field": "revenue_growth_yoy",
+        "weight": 0.08,
+        "direction": "desc"
+      },
+      {
+        "field": "pe_ratio",
+        "weight": 0.05,
+        "direction": "asc"
+      }
+    ],
+    "tie_breakers": [
+      "momentum_90d",
+      "volume_ratio_20d",
+      "market_cap"
+    ]
+  },
+  "entry_signals": {
+    "logic": "AND",
+    "conditions": [
+      {
+        "type": "rank_in_top_n",
+        "n": 8
+      },
+      {
+        "type": "crosses_above",
+        "left": "sma_20",
+        "right": "sma_50",
+        "lookback_bars": 3
+      },
+      {
+        "type": "field_compare",
+        "field": "macd_histogram",
+        "op": ">",
+        "value": 0
+      },
+      {
+        "type": "field_compare",
+        "field": "volume_ratio_20d",
+        "op": ">",
+        "value": 1.2
+      },
+      {
+        "type": "field_compare",
+        "field": "rsi_14",
+        "op": "<",
+        "value": 70
+      }
+    ]
+  },
+  "exit_signals": {
+    "logic": "OR",
+    "conditions": [
+      {
+        "type": "rank_falls_below",
+        "rank": 30
+      },
+      {
+        "type": "crosses_below",
+        "left": "sma_20",
+        "right": "sma_50",
+        "lookback_bars": 3
+      },
+      {
+        "type": "stop_loss",
+        "mode": "atr_multiple",
+        "atr": "atr_14",
+        "multiple": 2.0
+      },
+      {
+        "type": "trailing_stop",
+        "pct": 0.1
+      },
+      {
+        "type": "take_profit",
+        "pct": 0.25
+      },
+      {
+        "type": "field_compare",
+        "field": "adjusted_close",
+        "op": "<",
+        "value": "sma_200"
+      }
+    ]
+  },
+  "backtest": {
+    "initial_cash": 100000,
+    "benchmark": "SPY",
+    "start_date": "2018-01-01",
+    "end_date": "2025-12-31",
+    "rebalance_at": "next_open",
+    "fill_price": "next_open",
+    "include_slippage": true,
+    "include_commission": true,
+    "metrics": [
+      "cagr",
+      "annualized_volatility",
+      "sharpe",
+      "sortino",
+      "max_drawdown",
+      "calmar",
+      "win_rate",
+      "alpha",
+      "beta"
+    ],
+    "enabled": true,
+    "color": "#8b5cf6",
+    "group": "momentum",
+    "order": 104,
+    "label": "TopRank MA+Mom"
+  },
+  "dashboard": {
+    "title": "TopRank MA Momentum Dashboard",
+    "subtitle": "多因子加權 × MA交叉進場 × ATR停損追蹤",
+    "accent_color": "#8b5cf6",
+    "portfolio_label": "TopRank 持股（最多 8 檔）",
+    "rankings": {
+      "type": "factor_score_list",
+      "title": "多因子排名（前 20）",
+      "show_top_n": 20
+    },
+    "extra_sections": []
+  },
+  "email": {
+    "subject_template": "[TopRank #{account_id}] {date} NAV ${nav:,.0f} ({today_change_pct:+.2f}%)",
+    "recipients_env": "EMAIL_RECIPIENT",
+    "sections": [
+      "header",
+      "kpi",
+      "strategy_card",
+      "portfolio_badges",
+      "positions_table",
+      "rankings",
+      "today_events",
+      "trades",
+      "cta",
+      "footer"
+    ]
+  }
+}

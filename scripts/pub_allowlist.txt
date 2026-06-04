@@ -1,0 +1,40 @@
+# tech-rebalance-pub 公開白名單（單一事實來源）
+# include glob（相對 repo root）；! 開頭為排除。只有列出的才會進公開鏡像。
+
+# ── 根層引擎模組 ──
+runner.py
+run_account.py
+trader.py
+portfolio.py
+market_cap.py
+trade_log.py
+logger.py
+dashboard.py
+email_report.py
+harvest.py
+market_state.py
+universe.py
+pyproject.toml
+requirements.txt
+README.md
+
+# ── 引擎套件 + 資產 ──
+engine/**
+brokers/**
+strategies/**
+schemas/**
+scripts/**
+
+# ── 引擎參考資料（data/ 只放這三個，帳戶 state 絕不進）──
+data/__init__.py
+data/universe.json
+data/shares_outstanding.json
+
+# ── 測試（排除去敏 golden 樣本，零個資外洩）──
+tests/**
+!tests/fixtures/golden/**
+
+# ── 範本 + 公開 CI ──
+examples/repo-b-template/**
+.github/workflows/release.yml
+.github/workflows/compat_ci.yml

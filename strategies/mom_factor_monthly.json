@@ -1,0 +1,100 @@
+{
+  "$schema": "strategy-schema-v3.json",
+  "id": "mom_factor_monthly",
+  "version": "1.0",
+  "schema_version": "3.0.0",
+
+  "meta": {
+    "name": "月度動能因子 TOP10",
+    "description": "動態 universe：40% 3m 動能 + 30% 12m 動能 + 30% 市值，月初取前 10，等權重再平衡",
+    "author": "itemhsu",
+    "created_at": "2026-05-29",
+    "tags": ["momentum", "factor", "monthly", "top10", "tech"],
+    "benchmark": "QQQ",
+    "asset_class": "equity",
+    "market": "US_STOCK",
+    "enabled": true
+  },
+
+  "universe": {
+    "type": "single",
+    "source": {
+      "type": "inline",
+      "symbols": [
+        "AAPL","MSFT","GOOG","AMZN","META","NVDA","TSLA","AVGO",
+        "ORCL","ADBE","CRM","CSCO","INTC","AMD","QCOM","TXN",
+        "IBM","NFLX","PYPL","MU",
+        "EBAY","HPQ","DELL","NTAP","JNPR","VRSN","NOK","AKAM",
+        "ADSK","ANSS","CDNS","SNPS","INTU","WDC","GRPN",
+        "SHOP","UBER","SNOW","CRWD","OKTA","DDOG","ZM","NET",
+        "PLTR","ABNB","U","ROKU","ZS","MDB","TEAM","SQ"
+      ]
+    }
+  },
+
+  "selection": {
+    "method": "factor_score",
+    "factors": [
+      { "metric": "price_momentum_3m",  "weight": 0.4 },
+      { "metric": "price_momentum_12m", "weight": 0.3 },
+      { "metric": "market_cap",         "weight": 0.3 }
+    ],
+    "n": 10,
+    "min_price": 5.0
+  },
+
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 10,
+    "max_weight_pct": 15,
+    "allow_fractional_shares": false
+  },
+
+  "rebalancing": {
+    "frequency": "monthly",
+    "rebalance_on": "first_trading_day",
+    "time": "09:45:00",
+    "timezone": "America/New_York",
+    "trigger": {
+      "type": "any",
+      "conditions": [
+        { "kind": "scheduled" },
+        { "kind": "composition_change" }
+      ]
+    },
+    "order_type": "market",
+    "sell_before_buy": true
+  },
+
+  "risk": {
+    "max_single_position_pct": 15,
+    "min_positions": 5
+  },
+
+  "backtest": {
+    "initial_cash": 100000,
+    "start_date": "2010-01-01",
+    "color": "#06b6d4",
+    "group": "momentum",
+    "order": 106,
+    "label": "Mom-Factor (monthly)",
+    "enabled": true
+  },
+
+  "dashboard": {
+    "title": "月度動能因子 TOP10",
+    "accent_color": "#06b6d4",
+    "portfolio_label": "月度動能前10",
+    "rankings": {
+      "type": "market_cap_list",
+      "title": "因子排名前 20",
+      "show_top_n": 20
+    }
+  },
+
+  "email": {
+    "subject_template": "[{date}] Mom-Factor Monthly NAV ${nav} {pct}",
+    "recipients_env": "EMAIL_RECIPIENT",
+    "sections": ["kpi", "trades", "positions", "rankings"]
+  }
+}

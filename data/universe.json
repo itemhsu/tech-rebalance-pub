@@ -1,0 +1,11 @@
+{
+  "last_updated": "2026-05-05",
+  "description": "科技股候選池 — 每季人工審查，來源：S&P 500 科技類股市值排名",
+  "stocks": [
+    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN",
+    "META", "TSM",  "ASML", "AVGO", "AMD",
+    "ORCL", "CRM",  "ADBE", "CSCO", "INTC",
+    "QCOM", "TXN",  "NOW",  "V",    "MA",
+    "IBM",  "NFLX", "UBER", "SNOW", "PLTR"
+  ]
+}

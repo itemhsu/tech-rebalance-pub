@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "schema_version": "1.0",
+    "strategy": "top10",
+    "account_id": "1",
+    "account_label": "帳戶 #1 (TOP10)",
+    "generated_at": "2026-05-16T22:00:00Z",
+    "trading_date": "2026-05-16",
+    "dry_run": false,
+    "strategy_status": "active",
+    "strategy_start_date": "2024-01-15",
+    "previous_strategy": null,
+    "accent_color": "#38bdf8",
+    "same_strategy_accounts": [
+      { "id": "1", "label": "帳戶 #1 (TOP10)" }
+    ]
+  },
+  "summary": {
+    "nav": 128450.00,
+    "cash": 2340.50,
+    "initial_nav": 100000.00,
+    "inception_date": "2024-01-15",
+    "today_change": 1230.40,
+    "today_change_pct": 0.97,
+    "total_return": 28450.00,
+    "total_return_pct": 28.45,
+    "total_return_pct_twr": 28.45,
+    "net_contribution": 0.0,
+    "total_deposited": 0.0,
+    "total_withdrawn": 0.0,
+    "investment_gain": 28450.00,
+    "ytd_return_pct": 12.30,
+    "monthly_return_pct": 3.10,
+    "max_drawdown_pct": -18.40,
+    "sharpe_ratio": 1.42,
+    "total_paused_days": 0,
+    "is_paused": false,
+    "paused_since": null
+  },
+  "portfolio": {
+    "label": "前10名持股",
+    "symbols": ["NVDA", "MSFT", "AAPL", "GOOGL", "META", "AMZN", "TSLA", "AVGO", "AMD", "TSM"],
+    "rebalance_count": 2
+  },
+  "positions": [
+    {
+      "symbol": "NVDA",
+      "qty": 30.0,
+      "avg_entry_price": 820.00,
+      "current_price": 1050.40,
+      "market_value": 31512.00,
+      "unrealized_pl": 6912.00,
+      "unrealized_plpc": 0.2810,
+      "weight": 9.85,
+      "in_portfolio": true
+    },
+    {
+      "symbol": "MSFT",
+      "qty": 30.0,
+      "avg_entry_price": 380.00,
+      "current_price": 415.20,
+      "market_value": 12456.00,
+      "unrealized_pl": 1056.00,
+      "unrealized_plpc": 0.0926,
+      "weight": 9.71,
+      "in_portfolio": true
+    }
+  ],
+  "nav_history": [
+    { "date": "2024-01-15", "nav": 100000.00 },
+    { "date": "2026-05-16", "nav": 128450.00 }
+  ],
+  "drawdown": {
+    "dates":     ["2024-01-15", "2026-05-16"],
+    "portfolio": [0.0, -2.5],
+    "nasdaq":    [0.0, -3.0],
+    "sp500":     [0.0, -1.8]
+  },
+  "trade_log": [
+    {
+      "date": "2026-05-16",
+      "nav": 128450.00,
+      "trades_count": 2,
+      "portfolio": ["NVDA", "MSFT", "AAPL", "GOOGL", "META", "AMZN", "TSLA", "AVGO", "AMD", "TSM"],
+      "orders": [
+        { "symbol": "TSLA", "side": "sell", "qty": 5.0, "price": 312.40 },
+        { "symbol": "AMD",  "side": "buy",  "qty": 8.0, "price": 198.20 }
+      ]
+    }
+  ],
+  "rankings": {
+    "type": "market_cap_list",
+    "label": "科技股市值排名",
+    "items": [
+      { "rank": 1, "symbol": "NVDA",  "price": 1050.40, "change_pct": 2.10,  "market_cap_b": 2580, "in_portfolio": true },
+      { "rank": 2, "symbol": "MSFT",  "price": 415.20,  "change_pct": 0.80,  "market_cap_b": 3080, "in_portfolio": true },
+      { "rank": 3, "symbol": "AAPL",  "price": 300.08,  "change_pct": -0.30, "market_cap_b": 2800, "in_portfolio": true },
+      { "rank": 4, "symbol": "GOOGL", "price": 396.04,  "change_pct": 1.20,  "market_cap_b": 2400, "in_portfolio": true },
+      { "rank": 5, "symbol": "META",  "price": 613.07,  "change_pct": 0.50,  "market_cap_b": 1800, "in_portfolio": true },
+      { "rank": 6, "symbol": "AMZN",  "price": 262.96,  "change_pct": -0.40, "market_cap_b": 2700, "in_portfolio": true },
+      { "rank": 7, "symbol": "TSLA",  "price": 312.40,  "change_pct": 1.80,  "market_cap_b": 990,  "in_portfolio": true },
+      { "rank": 8, "symbol": "AVGO",  "price": 424.71,  "change_pct": 0.90,  "market_cap_b": 850,  "in_portfolio": true },
+      { "rank": 9, "symbol": "AMD",   "price": 198.20,  "change_pct": 3.20,  "market_cap_b": 320,  "in_portfolio": true },
+      { "rank": 10,"symbol": "TSM",   "price": 188.50,  "change_pct": -0.60, "market_cap_b": 780,  "in_portfolio": true }
+    ]
+  },
+  "events": [],
+  "email": {
+    "subject": "[TOP10 #1] 2026-05-16 NAV $128,450 (+0.97%)",
+    "preheader": "今日持倉 10 檔・交易 2 筆・總報酬 +28.4%",
+    "dashboard_url": "https://itemhsu.github.io/tech-rebalance-dashboard/1/dashboard.html",
+    "sections_rendered": ["header", "kpi", "portfolio_badges", "positions_table", "rankings", "trades", "cta", "footer"]
+  }
+}

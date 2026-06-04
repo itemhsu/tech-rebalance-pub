@@ -1,0 +1,15 @@
+{
+  "accounts": [
+    {
+      "id": "1",
+      "strategy": "top10",
+      "label": "我的 TOP10 帳戶",
+      "broker": "alpaca",
+      "environment": "paper",
+      "secret_prefix": "ACC1",
+      "enabled": true,
+      "data_dir": "data/1",
+      "email_recipients": ["you@example.com"]
+    }
+  ]
+}

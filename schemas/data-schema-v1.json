@@ -1,0 +1,361 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "data-schema-v1.json",
+  "title": "Account data.json Schema v1",
+  "type": "object",
+  "required": ["meta", "summary", "portfolio", "positions", "nav_history", "drawdown", "trade_log", "rankings", "events", "email"],
+  "additionalProperties": false,
+  "properties": {
+
+    "upstream_notice": {
+      "type": "string",
+      "description": "fork 落後上游時的柔性提示（engine/upstream_check.behind_notice）。"
+    },
+
+    "stale_warning": {
+      "type": "string",
+      "description": "今日未更新（落後其他帳戶）→ email/儀表板紅色橫幅，提示執行可能失敗。"
+    },
+
+    "order_alerts": {
+      "type": "array",
+      "description": "近 N 天訂單異常（被拒/未結）→ email 報告紅色橫幅。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind":   { "type": "string" },
+          "symbol": { "type": "string" },
+          "action": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+
+    "strategy_history": {
+      "type": "array",
+      "description": "帳戶生命週期：歷經的策略段（期間 → 策略）。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "strategy": { "type": "string" },
+          "label":    { "type": "string" },
+          "from":     { "type": "string" },
+          "to":       { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "strategy_card": {
+      "type": "object",
+      "description": "策略描述卡片（由 engine/strategy_card.py 產生）",
+      "properties": {
+        "name":                { "type": "string" },
+        "description":         { "type": "string" },
+        "tags":                { "type": "array",  "items": { "type": "string" } },
+        "benchmark":           { "type": "string" },
+        "universe_summary":    { "type": "string" },
+        "selection_summary":   { "type": "string" },
+        "rebalancing_summary": { "type": "string" },
+        "risk_highlights":     { "type": "array",  "items": { "type": "string" } },
+        "ranking_factors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name":      { "type": "string" },
+              "weight":    { "type": "string" },
+              "direction": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "filter_summary": {
+          "type": "object",
+          "properties": {
+            "fundamental": { "type": "array", "items": { "type": "string" } },
+            "technical":   { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "meta": {
+      "type": "object",
+      "required": ["schema_version", "strategy", "account_id", "account_label",
+                   "generated_at", "trading_date", "dry_run",
+                   "strategy_status", "strategy_start_date", "same_strategy_accounts"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version":           { "type": "string" },
+        "strategy":                 { "type": "string", "minLength": 1 },
+        "account_id":               { "type": "string", "minLength": 1 },
+        "account_label":            { "type": "string" },
+        "generated_at":             { "type": "string" },
+        "trading_date":             { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "dry_run":                  { "type": "boolean" },
+        "strategy_status":          { "type": "string", "enum": ["active", "paused", "switched"] },
+        "strategy_start_date":      { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "previous_strategy":        { "type": ["string", "null"] },
+        "accent_color":             { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "same_strategy_accounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "id":    { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "summary": {
+      "type": "object",
+      "required": ["nav", "cash", "initial_nav", "inception_date",
+                   "today_change", "today_change_pct",
+                   "total_return", "total_return_pct", "total_return_pct_twr",
+                   "net_contribution", "total_deposited", "total_withdrawn", "investment_gain",
+                   "max_drawdown_pct", "total_paused_days", "is_paused"],
+      "additionalProperties": false,
+      "properties": {
+        "nav":                   { "type": "number" },
+        "cash":                  { "type": "number" },
+        "initial_nav":           { "type": "number", "minimum": 0 },
+        "inception_date":        { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "today_change":          { "type": "number" },
+        "today_change_pct":      { "type": "number" },
+        "total_return":          { "type": "number" },
+        "total_return_pct":      { "type": "number" },
+        "total_return_pct_twr":  { "type": "number" },
+        "net_contribution":      { "type": "number" },
+        "total_deposited":       { "type": "number", "minimum": 0 },
+        "total_withdrawn":       { "type": "number", "minimum": 0 },
+        "investment_gain":       { "type": "number" },
+        "ytd_return_pct":        { "type": ["number", "null"] },
+        "monthly_return_pct":    { "type": ["number", "null"] },
+        "max_drawdown_pct":      { "type": "number", "maximum": 0 },
+        "sharpe_ratio":          { "type": ["number", "null"] },
+        "total_paused_days":     { "type": "integer", "minimum": 0 },
+        "is_paused":             { "type": "boolean" },
+        "paused_since":          { "type": ["string", "null"] }
+      }
+    },
+
+    "portfolio": {
+      "type": "object",
+      "required": ["label", "symbols", "rebalance_count"],
+      "additionalProperties": false,
+      "properties": {
+        "label":            { "type": "string" },
+        "symbols":          { "type": "array", "items": { "type": "string" } },
+        "rebalance_count":  { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "qty", "avg_entry_price", "current_price",
+                     "market_value", "unrealized_pl", "unrealized_plpc",
+                     "weight", "in_portfolio"],
+        "additionalProperties": false,
+        "properties": {
+          "symbol":           { "type": "string" },
+          "qty":              { "type": "number", "minimum": 0 },
+          "avg_entry_price":  { "type": "number", "minimum": 0 },
+          "current_price":    { "type": "number", "minimum": 0 },
+          "market_value":     { "type": "number" },
+          "unrealized_pl":    { "type": "number" },
+          "unrealized_plpc":  { "type": "number" },
+          "weight":           { "type": "number", "minimum": 0 },
+          "in_portfolio":     { "type": "boolean" }
+        }
+      }
+    },
+
+    "nav_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "nav"],
+        "additionalProperties": false,
+        "properties": {
+          "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "nav":  { "type": "number" },
+          "event": {
+            "type": "object",
+            "required": ["type", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "type":   { "type": "string" },
+              "label":  { "type": "string" },
+              "amount": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+
+    "drawdown": {
+      "type": "object",
+      "required": ["dates", "portfolio", "nasdaq", "sp500"],
+      "additionalProperties": false,
+      "properties": {
+        "dates":     { "type": "array", "items": { "type": "string" } },
+        "portfolio": { "type": "array", "items": { "type": "number" } },
+        "nasdaq":    { "type": "array", "items": { "type": ["number", "null"] } },
+        "sp500":     { "type": "array", "items": { "type": ["number", "null"] } }
+      }
+    },
+
+    "benchmark_nav": {
+      "type": "object",
+      "description": "標準化基準 NAV（以投組起始 NAV 為基期折算），與 nav_history 等長",
+      "additionalProperties": false,
+      "properties": {
+        "sp500":  { "type": "array", "items": { "type": ["number", "null"] } },
+        "nasdaq": { "type": "array", "items": { "type": ["number", "null"] } }
+      }
+    },
+
+    "trade_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "nav", "trades_count", "portfolio", "orders"],
+        "additionalProperties": false,
+        "properties": {
+          "date":         { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "nav":          { "type": "number" },
+          "trades_count": { "type": "integer", "minimum": 0 },
+          "portfolio":    { "type": "array", "items": { "type": "string" } },
+          "orders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["symbol", "side", "qty", "price"],
+              "additionalProperties": false,
+              "properties": {
+                "symbol": { "type": "string" },
+                "side":   { "type": "string", "enum": ["buy", "sell"] },
+                "qty":    { "type": "number", "minimum": 0 },
+                "price":  { "type": "number", "minimum": 0 }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "rankings": {
+      "type": "object",
+      "required": ["type", "label"],
+      "properties": {
+        "type":  { "type": "string", "enum": ["market_cap_list", "universe_groups"] },
+        "label": { "type": "string" }
+      },
+      "if": { "properties": { "type": { "const": "market_cap_list" } } },
+      "then": {
+        "required": ["items"],
+        "properties": {
+          "type":  { "const": "market_cap_list" },
+          "label": { "type": "string" },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["rank", "symbol", "price", "change_pct", "market_cap_b", "in_portfolio"],
+              "additionalProperties": false,
+              "properties": {
+                "rank":         { "type": "integer", "minimum": 1 },
+                "symbol":       { "type": "string" },
+                "price":        { "type": "number" },
+                "change_pct":   { "type": "number" },
+                "market_cap_b": { "type": "number" },
+                "in_portfolio": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "required": ["groups"],
+        "properties": {
+          "type":   { "const": "universe_groups" },
+          "label":  { "type": "string" },
+          "groups": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "label", "items"],
+              "additionalProperties": false,
+              "properties": {
+                "id":    { "type": "string" },
+                "label": { "type": "string" },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["rank", "symbol", "price", "change_pct", "market_cap_b", "in_portfolio"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "rank":         { "type": "integer", "minimum": 1 },
+                      "symbol":       { "type": "string" },
+                      "price":        { "type": "number" },
+                      "change_pct":   { "type": "number" },
+                      "market_cap_b": { "type": "number" },
+                      "in_portfolio": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "date", "type", "nav_before", "nav_after"],
+        "additionalProperties": false,
+        "properties": {
+          "id":              { "type": "string" },
+          "date":            { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "type":            { "type": "string", "enum": ["deposit", "withdrawal", "strategy_switch", "strategy_pause", "strategy_resume"] },
+          "nav_before":      { "type": "number" },
+          "nav_after":       { "type": "number" },
+          "amount":          { "type": "number" },
+          "from_strategy":   { "type": "string" },
+          "to_strategy":     { "type": "string" },
+          "pause_reason":    { "type": "string" },
+          "resumed_date":    { "type": "string" },
+          "note":            { "type": "string" }
+        }
+      }
+    },
+
+    "email": {
+      "type": "object",
+      "required": ["subject", "preheader", "dashboard_url", "sections_rendered"],
+      "additionalProperties": false,
+      "properties": {
+        "subject":           { "type": "string" },
+        "preheader":         { "type": "string" },
+        "dashboard_url":     { "type": "string" },
+        "sections_rendered": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

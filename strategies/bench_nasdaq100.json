@@ -1,0 +1,70 @@
+{
+  "$schema": "strategy-schema-v3.json",
+  "id": "bench_nasdaq100",
+  "version": "1.0",
+  "schema_version": "3.0.0",
+
+  "meta": {
+    "name": "NASDAQ-100",
+    "description": "QQQ buy & hold 基準",
+    "author": "itemhsu",
+    "created_at": "2026-05-29",
+    "tags": ["benchmark", "etf", "passive", "tech"],
+    "benchmark": "QQQ",
+    "asset_class": "etf",
+    "market": "US_STOCK",
+    "enabled": false
+  },
+
+  "universe": {
+    "type": "single",
+    "source": { "type": "inline", "symbols": ["QQQ"] }
+  },
+
+  "selection": {
+    "method": "buy_and_hold",
+    "n": 1
+  },
+
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 1,
+    "max_weight_pct": 100,
+    "allow_fractional_shares": false
+  },
+
+  "rebalancing": {
+    "frequency": "none",
+    "rebalance_on": "first_trading_day",
+    "time": "09:45:00",
+    "timezone": "America/New_York",
+    "trigger": { "type": "any", "conditions": [{ "kind": "scheduled" }] },
+    "order_type": "market",
+    "sell_before_buy": false
+  },
+
+  "risk": { "max_single_position_pct": 100, "min_positions": 1 },
+
+  "backtest": {
+    "initial_cash": 100000,
+    "start_date": "2010-01-01",
+    "color": "#94a3b8",
+    "group": "benchmark",
+    "order": 902,
+    "label": "NASDAQ-100",
+    "enabled": true
+  },
+
+  "dashboard": {
+    "title": "NASDAQ-100 基準",
+    "accent_color": "#94a3b8",
+    "portfolio_label": "QQQ",
+    "rankings": { "type": "market_cap_list", "title": "QQQ", "show_top_n": 1 }
+  },
+
+  "email": {
+    "subject_template": "[{date}] QQQ NAV ${nav}",
+    "recipients_env": "EMAIL_RECIPIENT",
+    "sections": ["kpi"]
+  }
+}

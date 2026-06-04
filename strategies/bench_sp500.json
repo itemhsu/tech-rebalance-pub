@@ -1,0 +1,70 @@
+{
+  "$schema": "strategy-schema-v3.json",
+  "id": "bench_sp500",
+  "version": "1.0",
+  "schema_version": "3.0.0",
+
+  "meta": {
+    "name": "S&P 500",
+    "description": "SPY buy & hold 基準",
+    "author": "itemhsu",
+    "created_at": "2026-05-29",
+    "tags": ["benchmark", "etf", "passive"],
+    "benchmark": "SPY",
+    "asset_class": "etf",
+    "market": "US_STOCK",
+    "enabled": false
+  },
+
+  "universe": {
+    "type": "single",
+    "source": { "type": "inline", "symbols": ["SPY"] }
+  },
+
+  "selection": {
+    "method": "buy_and_hold",
+    "n": 1
+  },
+
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 1,
+    "max_weight_pct": 100,
+    "allow_fractional_shares": false
+  },
+
+  "rebalancing": {
+    "frequency": "none",
+    "rebalance_on": "first_trading_day",
+    "time": "09:45:00",
+    "timezone": "America/New_York",
+    "trigger": { "type": "any", "conditions": [{ "kind": "scheduled" }] },
+    "order_type": "market",
+    "sell_before_buy": false
+  },
+
+  "risk": { "max_single_position_pct": 100, "min_positions": 1 },
+
+  "backtest": {
+    "initial_cash": 100000,
+    "start_date": "2010-01-01",
+    "color": "#64748b",
+    "group": "benchmark",
+    "order": 901,
+    "label": "S&P 500",
+    "enabled": true
+  },
+
+  "dashboard": {
+    "title": "S&P 500 基準",
+    "accent_color": "#64748b",
+    "portfolio_label": "SPY",
+    "rankings": { "type": "market_cap_list", "title": "SPY", "show_top_n": 1 }
+  },
+
+  "email": {
+    "subject_template": "[{date}] SPY NAV ${nav}",
+    "recipients_env": "EMAIL_RECIPIENT",
+    "sections": ["kpi"]
+  }
+}

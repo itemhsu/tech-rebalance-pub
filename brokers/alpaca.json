@@ -1,0 +1,84 @@
+{
+  "$schema": "broker-schema-v1.json",
+  "id": "alpaca",
+  "version": "1.0",
+  "display_name": "Alpaca Markets",
+  "country": "US",
+  "website": "https://alpaca.markets",
+
+  "integration": {
+    "type": "rest"
+  },
+
+  "auth": {
+    "method": "api_key_secret",
+    "required_env": ["{PREFIX}_API_KEY", "{PREFIX}_API_SECRET"],
+    "header_template": {
+      "APCA-API-KEY-ID":     "{api_key}",
+      "APCA-API-SECRET-KEY": "{api_secret}"
+    }
+  },
+
+  "environments": {
+    "paper": { "base_url": "https://paper-api.alpaca.markets" },
+    "live":  { "base_url": "https://api.alpaca.markets" }
+  },
+
+  "market_data": {
+    "data_url":             "https://data.alpaca.markets",
+    "latest_bars_endpoint": "/v2/stocks/bars/latest",
+    "calendar_endpoint":    "/v2/calendar",
+    "clock_endpoint":       "/v2/clock"
+  },
+
+  "endpoints": {
+    "account":     "/v2/account",
+    "positions":   "/v2/positions",
+    "orders":      "/v2/orders",
+    "order_by_id": "/v2/orders/{order_id}",
+    "cancel_all":  "/v2/orders"
+  },
+
+  "request": {
+    "encoding": "json",
+    "field_map": {
+      "symbol":        "symbol",
+      "qty":           "qty",
+      "side":          "side",
+      "order_type":    "type",
+      "time_in_force": "time_in_force"
+    }
+  },
+
+  "response": {
+    "order_id_path":     "id",
+    "order_status_path": "status",
+    "balance": {
+      "nav":          "portfolio_value",
+      "cash":         "cash",
+      "buying_power": "buying_power"
+    }
+  },
+
+  "capabilities": {
+    "fractional_shares":    true,
+    "asset_classes":        ["us_equity", "crypto"],
+    "order_types":          ["market", "limit", "stop", "stop_limit", "trailing_stop"],
+    "time_in_force":        ["day", "gtc", "opg", "cls", "ioc", "fok"],
+    "extended_hours":       true,
+    "min_order_value_usd":  1.0,
+    "commission_per_trade": 0.0
+  },
+
+  "market": {
+    "timezone":   "America/New_York",
+    "open_time":  "09:30",
+    "close_time": "16:00",
+    "currency":   "USD"
+  },
+
+  "rate_limits": {
+    "requests_per_minute": 200,
+    "orders_per_second":   10
+  }
+}

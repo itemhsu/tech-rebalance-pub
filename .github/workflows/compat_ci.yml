@@ -1,0 +1,59 @@
+name: Compatibility CI
+
+# fork 相容性守門（計劃 §6.3）：動到契約面（schema / 策略 / 券商 / 帳戶 / 報告產生）
+# 就跑相容性測試組。純離線、不需任何 secrets、不碰交易/金錢。
+on:
+  push:
+    paths:
+      - "schemas/**"
+      - "strategies/**"
+      - "brokers/**"
+      - "accounts.json"
+      - "engine/data_writer.py"
+      - "engine/selection.py"
+      - "trade_log.py"
+      - "mvp_dashboard.html"
+      - ".github/workflows/*.yml"
+      - "tests/test_compat_*.py"
+      - "tests/test_schema_compat.py"
+      - "scripts/schema_compat.py"
+  pull_request:
+    paths:
+      - "schemas/**"
+      - "strategies/**"
+      - "brokers/**"
+      - "accounts.json"
+      - "engine/data_writer.py"
+      - "engine/selection.py"
+      - "trade_log.py"
+      - "mvp_dashboard.html"
+      - ".github/workflows/*.yml"
+      - "tests/test_compat_*.py"
+      - "tests/test_schema_compat.py"
+      - "scripts/schema_compat.py"
+
+jobs:
+  compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # CT-BREAK-DETECT 需要歷史比對基線
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run compatibility test suite
+        run: |
+          python -m pytest -v \
+            tests/test_schema_compat.py \
+            tests/test_compat_align.py \
+            tests/test_compat_contracts.py \
+            tests/test_compat_tolerant.py \
+            tests/test_compat_golden.py \
+            tests/test_compat_data_schemas.py \
+            tests/test_compat_migrate.py

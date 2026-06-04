@@ -1,0 +1,209 @@
+{
+  "$schema": "strategy-schema-v3.json",
+  "id": "tech100_mom_12m_t10",
+  "version": "1.0",
+  "schema_version": "3.0.0",
+  "meta": {
+    "name": "Tech100 + 12m 動能 TOP10",
+    "description": "美股科技股 ~120 檔（含 IT/半導體/SaaS/payments/通訊）→ 動態 watchlist 取市值前 100 → 12 個月動能排前 10，月初等權重再平衡",
+    "author": "itemhsu",
+    "created_at": "2026-05-30",
+    "tags": [
+      "momentum",
+      "tech100",
+      "monthly",
+      "top10",
+      "12m"
+    ],
+    "benchmark": "QQQ",
+    "asset_class": "equity",
+    "market": "US_STOCK",
+    "enabled": true
+  },
+  "universe": {
+    "type": "single",
+    "source": {
+      "type": "inline",
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOG",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "AVGO",
+        "TSLA",
+        "TSM",
+        "ORCL",
+        "NFLX",
+        "ASML",
+        "ADBE",
+        "CRM",
+        "INTU",
+        "NOW",
+        "SNPS",
+        "CDNS",
+        "ANSS",
+        "WDAY",
+        "ADSK",
+        "FTNT",
+        "PANW",
+        "CRWD",
+        "OKTA",
+        "ZS",
+        "NET",
+        "DDOG",
+        "MDB",
+        "SNOW",
+        "TEAM",
+        "PLTR",
+        "SHOP",
+        "UBER",
+        "ABNB",
+        "U",
+        "DASH",
+        "ROKU",
+        "TWLO",
+        "ZM",
+        "HUBS",
+        "DOCU",
+        "BILL",
+        "TYL",
+        "SQ",
+        "PYPL",
+        "V",
+        "MA",
+        "FIS",
+        "FISV",
+        "ADP",
+        "PAYX",
+        "BR",
+        "AMD",
+        "QCOM",
+        "TXN",
+        "INTC",
+        "MU",
+        "LRCX",
+        "KLAC",
+        "AMAT",
+        "MCHP",
+        "ON",
+        "MPWR",
+        "SWKS",
+        "QRVO",
+        "NXPI",
+        "MRVL",
+        "TER",
+        "ENPH",
+        "STM",
+        "DELL",
+        "HPQ",
+        "SMCI",
+        "ANET",
+        "JNPR",
+        "NTAP",
+        "WDC",
+        "STX",
+        "MSI",
+        "XRX",
+        "ACN",
+        "IBM",
+        "CSCO",
+        "INFY",
+        "CTSH",
+        "EPAM",
+        "GLOB",
+        "WIT",
+        "DIS",
+        "CMCSA",
+        "T",
+        "VZ",
+        "TMUS",
+        "CHTR",
+        "NTES",
+        "BIDU",
+        "SIRI",
+        "WBD",
+        "GEN",
+        "AKAM",
+        "VRSN",
+        "FFIV",
+        "TTWO",
+        "EA",
+        "RBLX"
+      ]
+    }
+  },
+  "selection": {
+    "method": "weighted_percentile",
+    "n": 10,
+    "watchlist_top_n": 100,
+    "watchlist_metric": "market_cap"
+  },
+  "ranking": {
+    "method": "weighted_percentile_score",
+    "factors": [
+      {
+        "field": "price_momentum_12m",
+        "weight": 1.0,
+        "direction": "desc"
+      }
+    ]
+  },
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 10,
+    "max_weight_pct": 10,
+    "allow_fractional_shares": false
+  },
+  "rebalancing": {
+    "frequency": "monthly",
+    "rebalance_on": "first_trading_day",
+    "time": "09:45:00",
+    "timezone": "America/New_York",
+    "trigger": {
+      "type": "any",
+      "conditions": [
+        {
+          "kind": "scheduled"
+        }
+      ]
+    },
+    "order_type": "market",
+    "sell_before_buy": true
+  },
+  "risk": {
+    "max_single_position_pct": 10,
+    "min_positions": 8
+  },
+  "backtest": {
+    "initial_cash": 100000,
+    "start_date": "2010-01-01",
+    "color": "#15803d",
+    "group": "momentum",
+    "order": 223,
+    "label": "Tech100-Mom12m-T10",
+    "enabled": true
+  },
+  "dashboard": {
+    "title": "Tech100 + 12m 動能 TOP10",
+    "accent_color": "#15803d",
+    "portfolio_label": "Tech100 12m 動能前 10",
+    "rankings": {
+      "type": "market_cap_list",
+      "title": "科技股市值前 100 候選池",
+      "show_top_n": 100
+    }
+  },
+  "email": {
+    "subject_template": "[{date}] Tech100-Mom12m NAV ${nav} {pct}",
+    "recipients_env": "EMAIL_RECIPIENT",
+    "sections": [
+      "kpi",
+      "trades",
+      "positions",
+      "rankings"
+    ]
+  }
+}

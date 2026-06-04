@@ -1,0 +1,122 @@
+{
+  "$schema": "strategy-schema-v3.json",
+  "id": "top9psq",
+  "version": "2.0",
+  "meta": {
+    "name": "Monthly TOP10",
+    "description": "前10大市值科技股（100%），每月再平衡",
+    "author": "itemhsu",
+    "created_at": "2026-05-18",
+    "tags": [
+      "科技",
+      "市值",
+      "美股"
+    ],
+    "benchmark": "QQQ"
+  },
+  "universe": {
+    "type": "single",
+    "source": {
+      "type": "inline",
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "TSM",
+        "AVGO",
+        "AMD",
+        "ORCL",
+        "CRM",
+        "ADBE",
+        "NFLX",
+        "QCOM",
+        "INTC",
+        "TXN",
+        "NOW",
+        "UBER",
+        "SNOW",
+        "PLTR"
+      ]
+    }
+  },
+  "selection": {
+    "method": "top_n_by_metric",
+    "metric": "market_cap",
+    "n": 10,
+    "min_price": 1.0,
+    "exclude_symbols": []
+  },
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 10,
+    "min_weight_pct": 5.0,
+    "max_weight_pct": 20.0,
+    "cash_buffer_pct": 1.0,
+    "custom_weights": null
+  },
+  "rebalancing": {
+    "frequency": "monthly",
+    "rebalance_on": "first_trading_day",
+    "trigger": {
+      "type": "any",
+      "conditions": [
+        {
+          "kind": "composition_change"
+        },
+        {
+          "kind": "weight_drift",
+          "threshold_pct": 5.0
+        }
+      ]
+    },
+    "min_trade_value_usd": 50,
+    "order_type": "market",
+    "sell_before_buy": true
+  },
+  "risk": {
+    "max_single_position_pct": 15.0,
+    "min_positions": 5,
+    "allow_fractional_shares": false
+  },
+  "dashboard": {
+    "title": "Monthly TOP10 Dashboard",
+    "subtitle": "前 10 大市值科技股 100%，月度再平衡",
+    "accent_color": "#3b82f6",
+    "portfolio_label": "Monthly TOP10 持股",
+    "rankings": {
+      "type": "market_cap_list",
+      "title": "科技股市值排名（前15）",
+      "show_top_n": 15
+    },
+    "extra_sections": []
+  },
+  "email": {
+    "subject_template": "[Monthly TOP10 #{account_id}] {date} NAV ${nav:,.0f} ({today_change_pct:+.2f}%)",
+    "recipients_env": "EMAIL_RECIPIENT",
+    "sections": [
+      "header",
+      "kpi",
+      "strategy_card",
+      "portfolio_badges",
+      "positions_table",
+      "rankings",
+      "today_events",
+      "trades",
+      "cta",
+      "footer"
+    ]
+  },
+  "backtest": {
+    "initial_cash": 100000,
+    "start_date": "2010-01-01",
+    "enabled": true,
+    "color": "#f97316",
+    "group": "diversified",
+    "order": 203,
+    "label": "Top9-PSQ"
+  },
+  "schema_version": "3.0.0"
+}

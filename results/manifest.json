@@ -1,0 +1,186 @@
+{
+  "generated_at": "2026-05-30T04:23:58Z",
+  "source_dir": "/Users/miniaicar/Downloads/tradecopy/strategies",
+  "strategies": [
+    {
+      "id": "mom_6m_t10",
+      "label": "MOM-6m-T10",
+      "color": "#f59e0b",
+      "group": "momentum",
+      "file": "mom_6m_t10.json",
+      "enabled": true,
+      "order": 101
+    },
+    {
+      "id": "mom_3m_t10",
+      "label": "MOM-3m-T10",
+      "color": "#3b82f6",
+      "group": "momentum",
+      "file": "mom_3m_t10.json",
+      "enabled": true,
+      "order": 102
+    },
+    {
+      "id": "mom_12m_t5",
+      "label": "MOM-12m-T5",
+      "color": "#a855f7",
+      "group": "momentum",
+      "file": "mom_12m_t5.json",
+      "enabled": true,
+      "order": 103
+    },
+    {
+      "id": "toprank_ma_momentum",
+      "label": "TopRank MA+Mom",
+      "color": "#8b5cf6",
+      "group": "momentum",
+      "file": "toprank_ma_momentum.json",
+      "enabled": true,
+      "order": 104
+    },
+    {
+      "id": "mom_6m_t20",
+      "label": "MOM-6m-T20",
+      "color": "#3b82f6",
+      "group": "momentum",
+      "file": "mom_6m_t20.json",
+      "enabled": true,
+      "order": 105
+    },
+    {
+      "id": "mom_factor_monthly",
+      "label": "Mom-Factor (monthly)",
+      "color": "#06b6d4",
+      "group": "momentum",
+      "file": "mom_factor_monthly.json",
+      "enabled": true,
+      "order": 106
+    },
+    {
+      "id": "top10",
+      "label": "Top10 (mcap)",
+      "color": "#10b981",
+      "group": "diversified",
+      "file": "top10.json",
+      "enabled": true,
+      "order": 201
+    },
+    {
+      "id": "d2p2t6",
+      "label": "D2P2T6",
+      "color": "#06b6d4",
+      "group": "diversified",
+      "file": "d2p2t6.json",
+      "enabled": true,
+      "order": 202
+    },
+    {
+      "id": "top9psq",
+      "label": "Top9-PSQ",
+      "color": "#f97316",
+      "group": "diversified",
+      "file": "top9psq.json",
+      "enabled": true,
+      "order": 203
+    },
+    {
+      "id": "d2p2t6_mom6m",
+      "label": "D2P2T6 + 6m 動能",
+      "color": "#22d3ee",
+      "group": "diversified",
+      "file": "d2p2t6_mom6m.json",
+      "enabled": true,
+      "order": 204
+    },
+    {
+      "id": "us100_mom_3m_t10",
+      "label": "US100-Mom3m-T10",
+      "color": "#fbbf24",
+      "group": "momentum",
+      "file": "us100_mom_3m_t10.json",
+      "enabled": true,
+      "order": 211
+    },
+    {
+      "id": "us100_mom_6m_t10",
+      "label": "US100-Mom6m-T10",
+      "color": "#f97316",
+      "group": "momentum",
+      "file": "us100_mom_6m_t10.json",
+      "enabled": true,
+      "order": 212
+    },
+    {
+      "id": "us100_mom_12m_t10",
+      "label": "US100-Mom12m-T10",
+      "color": "#ea580c",
+      "group": "momentum",
+      "file": "us100_mom_12m_t10.json",
+      "enabled": true,
+      "order": 213
+    },
+    {
+      "id": "tech100_mom_3m_t10",
+      "label": "Tech100-Mom3m-T10",
+      "color": "#22c55e",
+      "group": "momentum",
+      "file": "tech100_mom_3m_t10.json",
+      "enabled": true,
+      "order": 221
+    },
+    {
+      "id": "tech100_mom_6m_t10",
+      "label": "Tech100-Mom6m-T10",
+      "color": "#16a34a",
+      "group": "momentum",
+      "file": "tech100_mom_6m_t10.json",
+      "enabled": true,
+      "order": 222
+    },
+    {
+      "id": "tech100_mom_12m_t10",
+      "label": "Tech100-Mom12m-T10",
+      "color": "#15803d",
+      "group": "momentum",
+      "file": "tech100_mom_12m_t10.json",
+      "enabled": true,
+      "order": 223
+    },
+    {
+      "id": "weekly_top10",
+      "label": "Top10 (weekly)",
+      "color": "#ec4899",
+      "group": "weekly",
+      "file": "weekly_top10.json",
+      "enabled": true,
+      "order": 301
+    },
+    {
+      "id": "mom_factor_weekly",
+      "label": "Mom-Factor (weekly)",
+      "color": "#ec4899",
+      "group": "weekly",
+      "file": "mom_factor_weekly.json",
+      "enabled": true,
+      "order": 401
+    },
+    {
+      "id": "bench_sp500",
+      "label": "S&P 500",
+      "color": "#64748b",
+      "group": "benchmark",
+      "file": "bench_sp500.json",
+      "enabled": true,
+      "order": 901
+    },
+    {
+      "id": "bench_nasdaq100",
+      "label": "NASDAQ-100",
+      "color": "#94a3b8",
+      "group": "benchmark",
+      "file": "bench_nasdaq100.json",
+      "enabled": true,
+      "order": 902
+    }
+  ]
+}

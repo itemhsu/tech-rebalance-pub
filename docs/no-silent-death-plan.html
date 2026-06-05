@@ -85,6 +85,209 @@ probe_broker 對 list 呼叫 <code>.get</code> → 例外 → 被上層 <code>ex
 </ol>
 </div>
 
+<!-- ════════════════ 二點五、log 密度 ════════════════ -->
+<h2 id="density">二之二、log 密度標準：讀 log 就能除錯，不用截圖</h2>
+<div class="box bad">
+<b>反例（密度不足，等於沒寫）：</b>
+<pre>
+▶ 建立交易系統
+   · sync repo_b: warn
+   ⚠ 1/4 步有問題
+</pre>
+看不出：哪個檔？為什麼 warn？gh 回什麼？URL 是什麼？版本多少？→ 還是得問使用者截圖。
+</div>
+<div class="box good">
+<b>正例（足以遠端除錯）：</b>
+<pre>
+▶ 2026-06-05T12:03:11Z [a1b2c3d4] 建立/修復交易系統  ctx=item3hsu/tech-rebalance
+   · env: app=v0.4.2 os=macOS-14.5 gh_login=item3hsu engine_pin=v1.0.6
+   · gh repo create item3hsu/tech-rebalance: ok rc=0
+   · fetch templates/test_email.yml: <span class="ng">fail</span> rc=1 err="HTTP 404: Not Found
+     (repos/itemhsu/tech-rebalance-pub/contents/templates/test_email.yml)" url=...contents/templates/test_email.yml
+   · sync repo_b/.github/workflows/test_email.yml: <span class="ng">skip-no-template</span>（上一步抓檔失敗）
+   · sync repo_b/data/.gitkeep: created
+   ⚠ 1/5 步有問題：test_email.yml 未推（範本抓取 404）
+</pre>
+讀完直接知道：是 <code>templates/test_email.yml</code> 在 pub repo 不存在（或路徑錯）→ 不用任何截圖。
+</div>
+
+<h3>每筆 step 的「最低資訊量」契約</h3>
+<table>
+  <tr><th>動作類型</th><th>detail 必含</th></tr>
+  <tr><td>gh 呼叫</td><td>完整 args（金鑰除外）、<code>rc</code>、非零時 <code>stderr</code> 前 200 字</td></tr>
+  <tr><td>HTTP / 抓檔</td><td>method、URL、status/rc、失敗原因（SSL/404/timeout）</td></tr>
+  <tr><td>檔案 PUT</td><td>repo、path、bytes、是否帶 sha（新建/覆蓋）、rc</td></tr>
+  <tr><td>sync 每個 path</td><td>policy、action 結果、若 skip/fail <b>必附原因</b>（連到是哪一步失敗）</td></tr>
+  <tr><td>SMTP / 寄信</td><td>host、port、收件人、login 帳號（密碼除外）、例外類別</td></tr>
+  <tr><td>例外</td><td>例外型別 + 訊息 + <b>traceback 末 1500 字</b> + 當下關鍵變數值</td></tr>
+  <tr><td>每個 action 開頭</td><td><b>env 快照</b>：app 版本、OS、gh 登入名、repo slug、引擎 pin</td></tr>
+</table>
+
+<div class="box info">
+<b>三條密度硬規則：</b>
+<ol>
+  <li><b>每個 action 第一筆 step 必為 env 快照</b>（_ActionScope 自動補），讓每次操作都自帶環境。</li>
+  <li><b>任何 fail/skip/warn 的 detail 不得為空</b>——必含「是什麼、為什麼、相關值」。lint 檢查空 detail 的非 ok step。</li>
+  <li><b>gh / http 一律用包好的 logged 版</b>，回傳即記 rc + err，呼叫端不可裸呼。</li>
+</ol>
+</div>
+
+<!-- ════════════════ 二之三、逐點稽核 ════════════════ -->
+<h2 id="audit">二之三、逐行稽核：每個需要 log 的點（掃過代碼）</h2>
+<p style="color:#94a3b8">非口號。以下是實際 grep 全 codebase 後，每個 handler、每個會靜默失敗的 except、每個 gh/網路呼叫點的清單與所需 log。</p>
+
+<h3>A. 按鈕 handler（16 個 connect，須包 action()）</h3>
+<table>
+  <tr><th>handler</th><th>檔案</th><th>action 名稱 / 需記步驟</th></tr>
+  <tr><td><code>_do_build_repob</code></td><td>wizard</td><td>建立/修復：repo create×2、accounts seed、sync repo_b（逐 path）、sync dashboard、Pages 啟用、legacy 偵測</td></tr>
+  <tr><td><code>_do_update_engine</code></td><td>wizard</td><td>更新引擎：列 workflows、選檔、讀 sha、migrate、PUT（含 rc）</td></tr>
+  <tr><td><code>_gh_login</code></td><td>wizard</td><td>gh 登入：Popen 結果、probe_gh</td></tr>
+  <tr><td><code>_refresh_status</code></td><td>wizard</td><td>偵測：repo 存在×2、列 workflow、解析 pin（rc 全記）</td></tr>
+  <tr><td><code>_finish</code></td><td>wizard</td><td>完成：寫 config</td></tr>
+  <tr><td><code>_test_email</code></td><td>overview</td><td>測試發信：trigger workflow rc、輪詢 conclusion</td></tr>
+  <tr><td><code>_do_dryrun</code></td><td>overview</td><td>dry-run：run_workflow rc + 例外</td></tr>
+  <tr><td><code>_save_sender</code></td><td>overview</td><td>儲存寄件人：寫 config</td></tr>
+  <tr><td><code>_set</code>(secret)</td><td>overview</td><td>設 secret：gh.set_secret rc（值遮罩）</td></tr>
+  <tr><td><code>_send_log</code></td><td>log</td><td>發送 log：組裝 bytes、SMTP 結果 / 後援</td></tr>
+  <tr><td><code>_test_and_save</code></td><td>accounts</td><td>測試連線並儲存：fetch_account_id、probe_broker、repo.add/update、secret_writes 逐筆 rc</td></tr>
+  <tr><td><code>_download_log</code></td><td>log</td><td>下載 log：gh run download rc</td></tr>
+  <tr><td><code>_apply</code>(cron)</td><td>schedule</td><td>改排程：寫回 rc</td></tr>
+  <tr><td><code>_open_wizard</code></td><td>overview</td><td>導覽（豁免，但開關仍記一筆）</td></tr>
+  <tr><td><code>refresh / _show_log / _on_broker_changed / _env_changed / _poll_tick</code></td><td>多處</td><td>讀取型：失敗記 warn，不需 action 包但 gh/讀檔仍記</td></tr>
+</table>
+
+<h3>B. 靜默失敗點（grep except → 需補 log 的回傳）</h3>
+<table>
+  <tr><th>位置</th><th>函式</th><th>失敗時（現況靜默）</th><th>須補 log</th></tr>
+  <tr><td>catalog.py:45</td><td><code>_fetch_pub_manifest</code></td><td><code>except: return None</code></td><td>記 fail：list_versions/fetch rc + 原因（→ 才知為何下拉用 fallback）</td></tr>
+  <tr><td>repo_sync.py:48</td><td><code>_gh_get_content</code></td><td><code>return None</code>（解碼/rc 失敗）</td><td>記 fail：path、rc、err（→ 才知 template 為何抓不到，正是 test_email 案）</td></tr>
+  <tr><td>probes.py:50/109/130/157</td><td>probe_broker / fetch_account_id / probe_email</td><td>回 (False, 短訊息)</td><td>detail 補：URL、status、例外型別、關鍵值（非只一行字）</td></tr>
+  <tr><td>log_reader.py:46/76/89</td><td>cron_runs / jsonl 讀取</td><td><code>return []</code></td><td>記 warn：gh rc 或解析錯（→ 排程空白才有解釋）</td></tr>
+  <tr><td>state_reader.py:39</td><td><code>read</code></td><td>回 exists=False</td><td>記 warn：哪個帳戶、哪個檔讀不到</td></tr>
+  <tr><td>accounts_repo.py:56</td><td><code>load</code></td><td><code>return []</code></td><td>記 warn：accounts.json 讀取失敗原因</td></tr>
+  <tr><td>wizard.py:42</td><td><code>_gh</code></td><td>例外 → (1,"",str(e))</td><td>改 logged 版：每次呼叫記 args+rc，非零記 err</td></tr>
+  <tr><td>wizard.py:199/277/334</td><td>refresh / build / update 內 json 解析</td><td><code>except: names=[]/pass</code></td><td>記 warn：解析失敗的原文前 120 字</td></tr>
+  <tr><td>env_fix.py:37</td><td>ensure_path</td><td>靜默</td><td>記 step：PATH 補了什麼 / 失敗</td></tr>
+</table>
+
+<h3>C. gh / 網路呼叫密度（共 ~60 處，全改 logged）</h3>
+<table>
+  <tr><th>檔案</th><th>呼叫數</th><th>處理</th></tr>
+  <tr><td>wizard.py</td><td>19× <code>_gh</code></td><td><code>_gh</code> 內建記錄 args+rc+err（一處改、全部受惠）</td></tr>
+  <tr><td>probes.py</td><td>7×（SMTP/HTTP/gh）</td><td>每個 except 補 URL/host/型別</td></tr>
+  <tr><td>overview / workflow_runner / engine_release / manifest / repo_sync</td><td>5/4/2/2/2</td><td>回傳即記 rc；非零 warn</td></tr>
+</table>
+<div class="box info">
+<b>關鍵槓桿：</b><code>wizard._gh</code> 與 <code>repo_sync._gh_get_content</code> 與 <code>workflow_runner</code> 是
+所有 gh 流量的瓶頸——在這幾個函式內建 log，就涵蓋 ~50/60 呼叫點，不必逐行加。
+</div>
+
+<!-- ════════════════ 二之四、前置資源檢查 ════════════════ -->
+<h2 id="preflight">二之四、呼叫外部前，先記「資源就緒狀態」（preflight）</h2>
+
+<div class="box bad">
+<b>血案：</b>「測試發信」直接觸發 GitHub workflow，<b>呼叫前從沒檢查它依賴的資源</b>。
+workflow 跑 9 秒後才回 <code>missing EMAIL_SENDER</code>。
+GUI log 只有 <code>test_email: fail</code>。於是猜了四輪（編碼/空格/IP/auth）全錯——
+<b>因為根因（EMAIL_SENDER secret 不存在）在「呼叫之前」就已注定，卻從沒被記下。</b>
+</div>
+
+<div class="box good">
+<b>原則：任何外部呼叫前，先 log 它依賴的「每一個資源」的就緒狀態。</b>
+缺資源 → 直接記成失敗原因，<b>並在呼叫前就擋下</b>（不盲目觸發、不等遠端回一個模糊錯誤）。
+<pre>
+def _test_email(self):
+    with LOG.action("測試發信", ctx=self.repo_slug) as a:
+        ready = preflight(a, self.repo_slug, requires=[
+            Secret("EMAIL_SENDER"),            # ← 這次缺的，preflight 立刻抓到
+            Secret("EMAIL_PASSWORD"),
+            WorkflowFile("test_email.yml"),
+            GhAuth(),
+        ])
+        if not ready:
+            return    # 缺資源 → 不觸發；log 已寫明缺什麼
+        ...觸發 workflow...
+</pre>
+preflight 產生的 log（就緒一目了然）：
+<pre>
+▶ 測試發信  ctx=item3hsu/tech-rebalance
+   · preflight secret EMAIL_SENDER: <span class="ng">MISSING</span>   ← 根因，呼叫前就現形
+   · preflight secret EMAIL_PASSWORD: present
+   · preflight workflow test_email.yml: present
+   · preflight gh auth: ok (item3hsu)
+   ⚠ 前置檢查未過：缺 secret EMAIL_SENDER → 未觸發
+</pre>
+</div>
+
+<h3>資源類型（每種都有 readiness 檢查）</h3>
+<table>
+  <tr><th>資源</th><th>檢查方式</th><th>記什麼</th></tr>
+  <tr><td>Secret</td><td><code>gh secret list</code> 是否含此名</td><td>present / <b>MISSING</b>（值不取，不外洩）</td></tr>
+  <tr><td>WorkflowFile</td><td>repo 的 <code>.github/workflows/</code> 是否含此檔</td><td>present / missing（含查的是哪個分支）</td></tr>
+  <tr><td>RepoExists</td><td><code>gh api repos/{slug}</code></td><td>存在 / 404 / 無權限</td></tr>
+  <tr><td>GhAuth</td><td><code>gh auth status</code> / login 名</td><td>登入名 / 未登入</td></tr>
+  <tr><td>Config 值</td><td>本機 config 該鍵是否有值</td><td>有值 / 空</td></tr>
+  <tr><td>EngineVersion</td><td>pub release 列得到嗎</td><td>最新版 / 列不到</td></tr>
+  <tr><td>Network / 抓檔</td><td>對端是否可達</td><td>ok / SSL / 404 / timeout</td></tr>
+</table>
+
+<div class="box info">
+<b>兩條硬規則：</b>
+<ol>
+  <li><b>每個外部呼叫前必有一段 preflight</b>，列出它依賴的所有資源就緒狀態（即使全 ok 也要記，證明檢查過）。</li>
+  <li><b>preflight 任一資源 MISSING → 記成失敗原因並中止</b>，不把問題丟給遠端用模糊錯誤回報。</li>
+</ol>
+本案若有 preflight：第一次按「測試發信」就會顯示「缺 EMAIL_SENDER secret」，0 秒定案。
+</div>
+
+<!-- ════════════════ 二之五、跨系統邊界 ════════════════ -->
+<h2 id="boundary">二之五、跨系統邊界：抓回「對方的原始回應」</h2>
+<div class="box bad">
+GUI → GitHub Actions → Gmail SMTP，每跨一層就丟失下一層的回應。
+GitHub workflow 印的 <code>FAIL: missing EMAIL_SENDER</code>、Gmail 回的 <code>535-5.7.8 ...</code>
+都<b>從沒進 GUI log</b>，只剩一句 <code>fail</code>。
+</div>
+<div class="box good">
+<b>原則：凡跨系統邊界的呼叫，失敗時把對方的原始回應抓回來記。</b>
+<table>
+  <tr><th>邊界</th><th>抓回什麼</th><th>機制</th></tr>
+  <tr><td>觸發 GitHub workflow</td><td>該 run 的 stdout / 失敗步驟全文</td><td>失敗時自動 <code>gh run view {id} --log</code> 撈進 GUI log</td></tr>
+  <tr><td>workflow → Gmail SMTP</td><td><code>SMTPException</code> 完整訊息（含 5xx 碼）</td><td>workflow 內 <code>print(repr(e))</code>，不吞成「寄信失敗」</td></tr>
+  <tr><td>gh api</td><td>rc + stderr 全文</td><td>_gh 內建（已做）</td></tr>
+  <tr><td>broker REST</td><td>HTTP status + body 前段</td><td>probe_broker 記回應，不只「連線失敗」</td></tr>
+</table>
+</div>
+
+<h3>二之六、全代碼盤點：每個 handler 的 preflight / 跨邊界缺口（掃過代碼）</h3>
+<p style="color:#94a3b8">不是只修 email。grep 每個 handler 呼叫的外部資源後，逐一標出缺口。</p>
+<table>
+  <tr><th>handler</th><th>依賴的外部資源</th><th>preflight 現況</th><th>跨邊界抓回應現況</th></tr>
+  <tr><td><code>_test_email</code></td><td>EMAIL_SENDER✱ + EMAIL_PASSWORD secret、test_email.yml、gh auth</td><td class="ng">❌ 零檢查（本案）</td><td class="ng">❌ 不抓 workflow stdout，猜原因</td></tr>
+  <tr><td><code>_do_dryrun</code></td><td>repob_slug、daily workflow、ACC*_ALPACA_KEY/SECRET</td><td class="ng">❌ 盲目觸發</td><td class="ng">❌ 不抓 run log</td></tr>
+  <tr><td><code>_do_update_engine</code></td><td>repo B 存在、workflow 檔、引擎版本</td><td class="ng">❌ 沒先驗 repo/workflow</td><td>⚠ 有記 rc</td></tr>
+  <tr><td><code>_do_build_repob</code></td><td>gh auth、引擎版本、pub templates 可達</td><td>⚠ 部分（v0.4.3 記步驟）</td><td>⚠ repo_sync 記抓檔失敗</td></tr>
+  <tr><td><code>_save_sender</code></td><td>gh auth、寫權限、<b>須設 EMAIL_SENDER secret</b></td><td class="ng">❌ 沒驗 auth；<b>過去根本沒設 secret</b></td><td>⚠ GhError</td></tr>
+  <tr><td><code>_test_and_save</code></td><td>broker REST、金鑰</td><td class="ok">✅ 有測連線</td><td>⚠ 只回短訊息，無 HTTP body</td></tr>
+  <tr><td><code>_set</code> / <code>_send_log</code> / <code>_clear_log</code></td><td>gh 寫 / 本機 SMTP / 本機檔</td><td>⚠ 部分</td><td>⚠ 部分</td></tr>
+</table>
+<div class="box info">
+<b>引擎端（workflow）盤點：</b>
+<ul>
+  <li><code>daily.yml</code> 依賴 10 個 secret（ACC1–3 金鑰、EMAIL_*、PAGES_TOKEN）——
+      <b class="ok">run_account._resolve_credentials 已做對</b>：缺哪個就 <code>log.error 列出</code>。可當範本。</li>
+  <li><b><code>workflow_runner.view_log()</code> 已存在但沒人呼叫</b> —— 觸發 workflow 後從不抓 log 回 GUI。接上即補 R9。</li>
+</ul>
+</div>
+
+<h3>二之七、統一解法（一套，套用全部）</h3>
+<table>
+  <tr><th>元件</th><th>內容</th><th>補哪條規則</th></tr>
+  <tr><td><code>services/preflight.py</code>（新）</td><td>Secret / WorkflowFile / RepoExists / GhAuth / Config 檢查器；每個外部呼叫前跑、記每項就緒、缺則中止</td><td>R8</td></tr>
+  <tr><td>接上 <code>workflow_runner.view_log()</code></td><td>觸發 workflow 的 handler 失敗時自動抓 run log 回 GUI</td><td>R9</td></tr>
+  <tr><td>套到 6 個 GUI handler</td><td>_test_email / _do_dryrun / _do_update_engine / _do_build_repob / _save_sender / _set 各加對應 preflight</td><td>R8/R9</td></tr>
+  <tr><td>引擎一致化</td><td>沿用 run_account 的「缺金鑰明確列出」模式到所有寄信/推送步驟</td><td>—</td></tr>
+</table>
+
 <!-- ════════════════ 三、架構 ════════════════ -->
 <h2 id="c">三、ActionLog 架構</h2>
 
@@ -157,13 +360,74 @@ def gh_logged(args, a, inp=None):
 </div>
 
 <!-- ════════════════ 四、曝光 ════════════════ -->
-<h2 id="d">四、三層曝光（看得到 + 存得住）</h2>
+<h2 id="d">四、四層曝光（看得到 + 存得住 + 寄得出）</h2>
 <table>
   <tr><th>層</th><th>機制</th><th>用途</th></tr>
   <tr><td>① 即時對話框 / 狀態列</td><td>action 結束依 <code>problems()</code> 顯示 ✅ 或 ⚠＋清單</td><td>當下不被謊報成功</td></tr>
   <tr><td>② 日誌分頁</td><td>ActionLog signal → 表格即時 append（依 aid 分群、可展開步驟）</td><td>追蹤一次操作的每一步</td></tr>
-  <tr><td>③ 持久 JSONL</td><td><code>~/.tradingadmin/action_log.jsonl</code></td><td>事後除錯、回報問題附上</td></tr>
+  <tr><td>③ 持久 JSONL</td><td><code>~/.tradingadmin/action_log.jsonl</code></td><td>事後除錯</td></tr>
+  <tr><td>④ <b>📧 發送 log</b> 按鈕</td><td>日誌分頁一鍵把 log 寄給 itemhsu</td><td>使用者回報問題、開發者遠端診斷</td></tr>
 </table>
+
+<h3>4.1 日誌分頁的「📧 發送 log」按鈕</h3>
+<div class="box good">
+<b>用途：</b>使用者遇到問題，按一下就把完整動作日誌寄給 <code>itemhsu@gmail.com</code>，
+開發者不必猜、不必要求使用者複製貼上。
+<h4>寄送內容</h4>
+<ul>
+  <li>最近 N 筆（預設 500）action_log.jsonl，已遮罩任何疑似金鑰/token（<code>***</code>）</li>
+  <li>環境摘要：App 版本、OS、gh 登入名、repo slug、引擎 pin 版本</li>
+  <li>主旨：<code>[TradingAdmin log] {gh_login} {本地時間} {問題摘要可選}</code></li>
+</ul>
+<h4>寄送機制（與「測試發信」一致，零新依賴）</h4>
+<pre>
+def _send_log_email(self):
+    with LOG.action("發送 log email") as a:
+        body = mask_secrets(read_log_tail(500)) + "\n\n" + env_summary()
+        a.step("組裝 log", "ok", f"{len(body)} bytes")
+        # 用使用者自己的 EMAIL_SENDER / EMAIL_PASSWORD（SMTP），收件人固定 itemhsu
+        ok, msg = probes.send_log_to_dev(sender=EMAIL_SENDER, pw=EMAIL_PASSWORD,
+                                         to="itemhsu@gmail.com", body=body)
+        a.step("SMTP 寄送", "ok" if ok else "fail", msg)
+    self._result_dialog(a)        # 成功/失敗都依實際結果，不假成功
+</pre>
+<h4>沒有 EMAIL_PASSWORD 時的後援</h4>
+若使用者尚未設 <code>EMAIL_PASSWORD</code>（無法 SMTP），按鈕改為：
+<ul>
+  <li>把 log 存成桌面檔 <code>tradingadmin-log-YYYYMMDD.txt</code>，並開啟 Finder 標示，請使用者手動寄給 itemhsu；或</li>
+  <li>開 <code>mailto:itemhsu@gmail.com?subject=...&body=...</code>（短 log）由系統郵件 App 帶出。</li>
+</ul>
+<b>安全：</b>寄送前一律 <code>mask_secrets()</code>（比對 GitHub PAT / 長度≥20 的疑似金鑰 / <code>*_SECRET=</code> 樣式 → <code>***</code>）；
+收件人<b>寫死</b> itemhsu，不接受 UI 輸入（避免被導向他處）。
+</div>
+
+<h3>4.2 日誌分頁的「🗑 清除 log」按鈕</h3>
+<div class="box good">
+<b>用途：</b>使用者重現問題前先清掉舊 log，<b>寄來的 log 才乾淨、只含這次的足跡</b>，
+不會混入幾天前的雜訊讓除錯失焦。
+<h4>建議流程（UI 引導）</h4>
+<pre>
+重現問題標準步驟（顯示在分頁說明）：
+  1. 按「🗑 清除 log」      → 清空
+  2. 重做出問題的操作        → 只留這次
+  3. 按「📧 發送 log」       → 寄乾淨的 log
+</pre>
+<h4>行為</h4>
+<pre>
+def _clear_log(self):
+    with LOG.action("清除 log") as a:               # 清除本身也記一筆（諷刺但必要）
+        n = LOG.clear()                              # truncate action_log.jsonl
+        a.step("truncate action_log.jsonl", "ok", f"清除 {n} 行")
+    # 清除後第一筆就是這個「清除」action → 標記新一輪的起點
+    self.refresh()
+</pre>
+<ul>
+  <li>只清 <code>action_log.jsonl</code>（本機動作日誌）；<b>不碰</b>排程執行歷史（那在 GitHub，且非本機）。</li>
+  <li>清除前彈確認框（不可逆）。</li>
+  <li>清除動作<b>本身寫一筆 log</b>（含清掉幾行）→ 連「清空」都不靜默，且成為新一輪的時間起點。</li>
+  <li><b>可選的自動清理</b>：log 超過上限（如 5000 行 / 2 MB）時自動 rotate 保留尾段，避免無限長。</li>
+</ul>
+</div>
 
 <div class="box warn">
 <b>結果對話框新規則（取代「✅ 建立完成」）：</b>
@@ -187,6 +451,10 @@ test_email.yml 抓不到範本 → 對話框直接列「- repo_b/test_email.yml:
   <tr><td><span class="tag t-rule">R3</span> gh 非零必記</td><td>所有 _gh 呼叫經 <code>gh_logged</code> 或自行檢查 rc</td><td>—</td></tr>
   <tr><td><span class="tag t-rule">R4</span> 對話框不得假成功</td><td>顯示成功前必查 <code>problems()</code></td><td>—</td></tr>
   <tr><td><span class="tag t-rule">R5</span> 每個 clicked.connect 的 handler 都包 action()</td><td>introspection 測試掃描所有按鈕</td><td>純導覽（切分頁）可豁免</td></tr>
+  <tr><td><span class="tag t-rule">R6</span> 非 ok step 的 detail 不得為空</td><td>fail/skip/warn 必含「是什麼+為什麼+值」</td><td>—</td></tr>
+  <tr><td><span class="tag t-rule">R7</span> 每個 action 自帶 env 快照</td><td>第一筆 step 為 app/os/gh/repo/pin</td><td>—</td></tr>
+  <tr><td><span class="tag t-rule">R8</span> 外部呼叫前必有 preflight</td><td>列出所依賴資源就緒狀態；缺則中止</td><td>純本機計算可免</td></tr>
+  <tr><td><span class="tag t-rule">R9</span> 跨邊界失敗抓回對方原始回應</td><td>workflow stdout / SMTP 5xx / HTTP body</td><td>—</td></tr>
 </table>
 
 <div class="box">
@@ -199,7 +467,9 @@ AST 掃 <code>except</code> 子句，若 body 只有 <code>pass</code> 或只有
 <table>
   <tr><th>檔案</th><th>改動</th></tr>
   <tr><td><code>services/action_log.py</code>（新）</td><td>ActionLog 單例 + _ActionScope + JSONL + Qt signal</td></tr>
-  <tr><td><code>views/log_view.py</code></td><td>訂閱 ActionLog signal，依 aid 分群即時顯示步驟（取代/補強現有 audit）</td></tr>
+  <tr><td><code>views/log_view.py</code></td><td>訂閱 ActionLog signal，依 aid 分群即時顯示步驟；<b>加「📧 發送 log」+「🗑 清除 log」按鈕 + 重現步驟說明</b></td></tr>
+  <tr><td><code>services/action_log.py</code>（clear）</td><td><code>clear()</code> truncate jsonl 回行數；超限自動 rotate 保留尾段</td></tr>
+  <tr><td><code>services/probes.py</code>（log mail）</td><td><code>send_log_to_dev()</code> SMTP 寄 log 給 itemhsu（收件人寫死）；<code>mask_secrets()</code></td></tr>
   <tr><td><code>views/wizard.py</code></td><td>_do_build_repob / _do_update_engine / gh 登入 等 handler 全包 action()</td></tr>
   <tr><td><code>views/overview_view.py</code></td><td>測試發信 / 設定 secret / dry-run / 儲存寄件人 全包</td></tr>
   <tr><td><code>views/accounts_view.py</code></td><td>新增/編輯/刪除/測試連線 全包；連線失敗已 return，再加 step 記原因</td></tr>
@@ -222,6 +492,20 @@ AST 掃 <code>except</code> 子句，若 body 只有 <code>pass</code> 或只有
   <tr><td>L-08</td><td>R5：所有按鈕都包 action</td><td>introspection 掃描無漏網 handler</td><td><span class="tag t-test">整合</span></td></tr>
   <tr><td>L-09</td><td>結果對話框不假成功</td><td>有 problem 時必為 warn 對話框</td><td><span class="tag t-test">單元</span></td></tr>
   <tr><td>L-10</td><td>同 aid 分群</td><td>一次按鈕的所有 step 共用同一 aid</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-11</td><td>📧 發送 log 寄給 itemhsu</td><td>SMTP 收件人寫死 itemhsu@gmail.com，不可被覆寫</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-12</td><td>log 寄送前遮罩金鑰</td><td>含 PAT/secret 的 log → 輸出為 <code>***</code></td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-13</td><td>無 EMAIL_PASSWORD 後援</td><td>改存桌面檔/mailto，且該動作本身有 log（不靜默）</td><td><span class="tag t-test">整合</span></td></tr>
+  <tr><td>L-14</td><td>R6 密度：非 ok step 必有 detail</td><td>lint 對空 detail 的 fail/skip 紅燈</td><td><span class="tag t-test">CI</span></td></tr>
+  <tr><td>L-15</td><td>R7：action 第一筆是 env 快照</td><td>含 app/os/gh/repo/pin 五項</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-16</td><td>除錯充分性：模擬 404 抓檔</td><td>log 含 URL + rc + err 全文，足以定位（不需截圖）</td><td><span class="tag t-test">整合</span></td></tr>
+  <tr><td>L-17</td><td>🗑 清除 log 清空 jsonl</td><td>clear() 後 tail() 只剩「清除」這一筆 action</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-18</td><td>清除動作本身有 log（不靜默）</td><td>清除後第一筆即「清除 log」action + 清掉行數</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-19</td><td>清除只動本機 jsonl</td><td>不影響 GitHub 排程歷史 / 不誤刪其他檔</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-20</td><td>超限自動 rotate</td><td>>上限時保留尾段，不無限長</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-21</td><td><b>preflight 抓到缺 secret</b></td><td>EMAIL_SENDER 缺 → 記 MISSING 並中止，不觸發 workflow</td><td><span class="tag t-test">整合</span></td></tr>
+  <tr><td>L-22</td><td>preflight 全 ok 也記</td><td>資源齊全時每項記 present（證明檢查過）</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-23</td><td>跨邊界：workflow 失敗撈回 stdout</td><td>GUI log 含 workflow 印的 FAIL 行（去 ANSI/去原始碼回顯）</td><td><span class="tag t-test">整合</span></td></tr>
+  <tr><td>L-24</td><td>儲存寄件人會設 EMAIL_SENDER secret</td><td>set_secret("EMAIL_SENDER") 被呼叫（修本案）</td><td><span class="tag t-test">單元</span></td></tr>
 </table>
 
 <hr style="border-color:#334155;margin-top:3rem">

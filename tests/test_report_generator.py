@@ -35,15 +35,10 @@ def _canon(d):
     return d
 
 
-# ── R-03 Parity：泛用產生器 == 舊硬寫函式（結構一致；股價是刻意改善）──────────
-def test_parity_top10(tmp_path):
-    from scripts.migrate_to_mvp import migrate_top10
-    migrate_top10(tmp_path / "old")
+# ── R-03：泛用產生器輸出含真實股價（舊的 migrate_top10 parity 已隨函式移除）──────
+def test_top10_rankings_real_prices(tmp_path):
     generate_for_account(get_account("1"), tmp_path / "new")
-    old = json.loads((tmp_path / "old" / "1" / "data.json").read_text("utf-8"))
     new = json.loads((tmp_path / "new" / "1" / "data.json").read_text("utf-8"))
-    assert _canon(new) == _canon(old), "TOP10 新舊結構不一致"
-    # 改善驗證：新版 rankings 用真實股價（非全 $100 placeholder）
     prices = [it["price"] for it in new["rankings"]["items"]]
     assert any(p not in (0.0, 100.0) for p in prices), "rankings 應為真實股價"
 

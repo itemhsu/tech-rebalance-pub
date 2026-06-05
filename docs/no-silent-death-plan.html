@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>杜絕安靜失敗：統一動作日誌設計</title>
+<style>
+  body{font-family:-apple-system,sans-serif;max-width:1040px;margin:0 auto;padding:24px;background:#0f172a;color:#e2e8f0;line-height:1.7}
+  h1{font-size:1.9rem;color:#f8fafc;border-bottom:2px solid #334155;padding-bottom:12px}
+  h2{font-size:1.35rem;color:#7dd3fc;margin-top:2.2rem}
+  h3{font-size:1.08rem;color:#86efac;margin-top:1.5rem}
+  h4{color:#fbbf24;margin:1rem 0 .3rem}
+  .box{background:#1e293b;border-radius:8px;padding:16px 20px;margin:12px 0}
+  .bad{border-left:4px solid #f87171}
+  .good{border-left:4px solid #34d399}
+  .warn{border-left:4px solid #fbbf24}
+  .info{border-left:4px solid #60a5fa}
+  code{background:#0f172a;color:#7dd3fc;padding:2px 6px;border-radius:4px;font-size:.9em}
+  pre{background:#0f172a;padding:16px;border-radius:6px;overflow-x:auto;font-size:.84em;line-height:1.5;color:#cbd5e1}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th{background:#334155;padding:8px 12px;text-align:left;font-size:.85rem}
+  td{border-bottom:1px solid #1e293b;padding:8px 12px;font-size:.85rem;vertical-align:top}
+  tr:hover td{background:#1e293b}
+  .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.74rem;font-weight:600;margin:1px}
+  .t-test{background:#3b0764;color:#d8b4fe}
+  .t-rule{background:#7f1d1d;color:#fca5a5}
+  .ok{color:#34d399;font-weight:700}.ng{color:#f87171;font-weight:700}
+  .toc{background:#1e293b;border-radius:8px;padding:14px 22px;margin:14px 0}
+  .toc a{color:#7dd3fc;text-decoration:none}
+</style>
+</head>
+<body>
+
+<h1>🔊 杜絕安靜失敗：統一動作日誌設計</h1>
+<p style="color:#94a3b8">2026-06-05 · 原則：每個按鈕、每個內部步驟都必須留下足跡 — 我們不接受安靜的死亡</p>
+
+<div class="toc">
+<b>目錄</b>
+<a href="#a">一、安靜失敗的血案</a> ·
+<a href="#b">二、設計原則</a> ·
+<a href="#c">三、ActionLog 架構</a> ·
+<a href="#d">四、三層曝光</a> ·
+<a href="#e">五、禁止規則</a> ·
+<a href="#f">六、改造清單</a> ·
+<a href="#g">七、測試</a>
+</div>
+
+<!-- ════════════════ 一、血案 ════════════════ -->
+<h2 id="a">一、安靜失敗的血案（為何需要這個）</h2>
+
+<div class="box bad">
+<b>案例 1：urllib SSL 在 DMG 內失敗</b><br>
+<code>repo_sync</code> 用 urllib 抓 template → 打包 App 內 SSL 驗證失敗 →
+<code>except: return None</code> → render 靜默跳過 → <code>test_email.yml</code> 從沒推上去。
+<b>使用者卻看到「✅ 建立完成」對話框</b> → 以為成功 → 測試發信 404。
+<br><span class="ng">致命點：失敗無 log、結果對話框謊報成功。</span>
+</div>
+
+<div class="box bad">
+<b>案例 2：manifest environments 壓成 list</b><br>
+probe_broker 對 list 呼叫 <code>.get</code> → 例外 → 被上層 <code>except Exception</code> 吞成
+「連線失敗」一行字，沒有 traceback、沒有哪一步、沒有哪個值。除錯只能猜。
+</div>
+
+<div class="box bad">
+<b>案例 3：gh 回非零卻被忽略</b><br>
+多處 <code>_gh([...])</code> 不檢查 returncode 就往下走，後續才在別處爆，
+錯誤訊息與真正失敗點相距十萬八千里。
+</div>
+
+<div class="box info">
+共同病根：<b>① 失敗被吞（bare except / return None）　② 結果不反映真實（假成功對話框）　③ 內部步驟無足跡</b>。
+本設計三者一次根治。
+</div>
+
+<!-- ════════════════ 二、原則 ════════════════ -->
+<h2 id="b">二、設計原則</h2>
+<div class="box good">
+<ol>
+  <li><b>每個按鈕</b>動作都記 <code>start</code> 與 <code>end(ok/fail)</code>。</li>
+  <li><b>每個內部步驟</b>（gh 呼叫、抓檔、PUT、sync 每個 path）都記一筆，含狀態與細節。</li>
+  <li><b>失敗一律有聲</b>：例外 → 記 traceback + 重新拋或顯示；<code>return None</code> 前必先記原因。</li>
+  <li><b>結果對話框反映真實</b>：依實際步驟結果統計，有任何 skip/fail 就顯示 ⚠ 並列出，<b>絕不謊報 ✅</b>。</li>
+  <li><b>可追蹤</b>：同一次按鈕的所有子步驟共用一個 <code>action_id</code>，在日誌中成群顯示。</li>
+  <li><b>可見 + 可存</b>：寫入持久 JSONL，並即時顯示在「日誌」分頁。</li>
+</ol>
+</div>
+
+<!-- ════════════════ 三、架構 ════════════════ -->
+<h2 id="c">三、ActionLog 架構</h2>
+
+<h3>3.1 核心：admin_gui/services/action_log.py</h3>
+<div class="box">
+<pre>
+@dataclass
+class Step:
+    name: str; status: str; detail: str = ""    # status: ok | fail | skip | warn
+
+class ActionLog:
+    """單例：寫 JSONL + 發 Qt signal 給日誌分頁即時顯示。"""
+    def __init__(self, path=AUDIT_JSONL): ...
+    def emit(self, record: dict): ...            # 寫檔 + signal
+
+    @contextmanager
+    def action(self, name: str, ctx: str = ""):
+        aid = uuid4().hex[:8]
+        self.emit({"ts":now(), "aid":aid, "kind":"start", "action":name, "ctx":ctx})
+        a = _ActionScope(self, aid, name)
+        try:
+            yield a
+        except Exception as e:                    # 例外＝大聲記，不吞
+            self.emit({"ts":now(),"aid":aid,"kind":"fail","action":name,
+                       "error":repr(e), "trace":traceback.format_exc()})
+            a._failed = True
+            raise                                 # 不私吞，往上拋
+        finally:
+            self.emit({"ts":now(),"aid":aid,"kind":"end","action":name,
+                       "ok": not a.has_problem(), "summary": a.summary()})
+
+class _ActionScope:
+    def step(self, name, status="ok", detail=""):  # 每個內部步驟
+        self.steps.append(Step(name,status,detail))
+        LOG.emit({"ts":now(),"aid":self.aid,"kind":"step","name":name,
+                  "status":status,"detail":detail})
+    def has_problem(self): return any(s.status in ("fail","warn","skip") for s in self.steps)
+    def problems(self):   return [s for s in self.steps if s.status in ("fail","warn","skip")]
+</pre>
+</div>
+
+<h3>3.2 按鈕一律包起來</h3>
+<div class="box">
+<pre>
+def _do_build_repob(self):
+    with LOG.action("建立/修復交易系統", ctx=self._repob_slug()) as a:
+        a.step("create repo B", detail=slug)
+        rc = _gh(["repo","create",slug,"--private"])
+        a.step("gh repo create", "ok" if rc[0]==0 else "warn", rc[2][:80])
+        actions = rs.sync("repo_b", slug, latest, gh=_gh, logger=a)   # sync 內每步也記
+        for path, act in actions.items():
+            a.step(f"repo_b/{path}", _status_of(act), act)
+        ...
+    # 結果對話框依 a.problems() 決定 ✅ / ⚠
+    self._finish_dialog(a)
+</pre>
+<b>關鍵：</b><code>sync</code> 收一個 <code>logger</code>，把 render/skip-no-template/PUT 失敗逐筆 <code>a.step()</code>。
+原本「skip-no-template」這種靜默跳過，現在會是一筆 <span class="ng">skip</span> 並出現在結果對話框。
+</div>
+
+<h3>3.3 gh 與抓檔包一層，回傳即記</h3>
+<div class="box">
+<pre>
+def gh_logged(args, a, inp=None):
+    code, out, err = _gh(args, inp)
+    if code != 0:
+        a.step("gh "+args[0:2], "warn", f"rc={code} {err[:120]}")   # 非零＝有聲
+    return code, out, err
+</pre>
+</div>
+
+<!-- ════════════════ 四、曝光 ════════════════ -->
+<h2 id="d">四、三層曝光（看得到 + 存得住）</h2>
+<table>
+  <tr><th>層</th><th>機制</th><th>用途</th></tr>
+  <tr><td>① 即時對話框 / 狀態列</td><td>action 結束依 <code>problems()</code> 顯示 ✅ 或 ⚠＋清單</td><td>當下不被謊報成功</td></tr>
+  <tr><td>② 日誌分頁</td><td>ActionLog signal → 表格即時 append（依 aid 分群、可展開步驟）</td><td>追蹤一次操作的每一步</td></tr>
+  <tr><td>③ 持久 JSONL</td><td><code>~/.tradingadmin/action_log.jsonl</code></td><td>事後除錯、回報問題附上</td></tr>
+</table>
+
+<div class="box warn">
+<b>結果對話框新規則（取代「✅ 建立完成」）：</b>
+<pre>
+problems = a.problems()
+if not problems:
+    info("✅ 完成", "全部步驟成功")
+else:
+    warn("⚠ 完成但有問題", "\n".join(f"- {p.name}: {p.status} {p.detail}" for p in problems))
+</pre>
+test_email.yml 抓不到範本 → 對話框直接列「- repo_b/test_email.yml: skip 取不到範本」，
+使用者與我們都立刻知道，不會再被假成功騙。
+</div>
+
+<!-- ════════════════ 五、禁止規則 ════════════════ -->
+<h2 id="e">五、禁止規則（可被 CI lint）</h2>
+<table>
+  <tr><th>規則</th><th>說明</th><th>例外</th></tr>
+  <tr><td><span class="tag t-rule">R1</span> 禁 bare except</td><td><code>except:</code> / <code>except Exception: pass</code> 一律禁</td><td>須 <code>a.step(..., "fail", repr(e))</code> 或 re-raise</td></tr>
+  <tr><td><span class="tag t-rule">R2</span> return None 前必記</td><td>任何「失敗回 None」前先 <code>a.step(name,"fail/skip",why)</code></td><td>—</td></tr>
+  <tr><td><span class="tag t-rule">R3</span> gh 非零必記</td><td>所有 _gh 呼叫經 <code>gh_logged</code> 或自行檢查 rc</td><td>—</td></tr>
+  <tr><td><span class="tag t-rule">R4</span> 對話框不得假成功</td><td>顯示成功前必查 <code>problems()</code></td><td>—</td></tr>
+  <tr><td><span class="tag t-rule">R5</span> 每個 clicked.connect 的 handler 都包 action()</td><td>introspection 測試掃描所有按鈕</td><td>純導覽（切分頁）可豁免</td></tr>
+</table>
+
+<div class="box">
+<b>Lint 實作：</b><code>scripts/check_no_silent.py</code>（pub engine + GUI 各一份 CI）：
+AST 掃 <code>except</code> 子句，若 body 只有 <code>pass</code> 或只有 <code>return None</code> 且同 scope 無 log 呼叫 → 報錯。
+</div>
+
+<!-- ════════════════ 六、改造清單 ════════════════ -->
+<h2 id="f">六、改造清單</h2>
+<table>
+  <tr><th>檔案</th><th>改動</th></tr>
+  <tr><td><code>services/action_log.py</code>（新）</td><td>ActionLog 單例 + _ActionScope + JSONL + Qt signal</td></tr>
+  <tr><td><code>views/log_view.py</code></td><td>訂閱 ActionLog signal，依 aid 分群即時顯示步驟（取代/補強現有 audit）</td></tr>
+  <tr><td><code>views/wizard.py</code></td><td>_do_build_repob / _do_update_engine / gh 登入 等 handler 全包 action()</td></tr>
+  <tr><td><code>views/overview_view.py</code></td><td>測試發信 / 設定 secret / dry-run / 儲存寄件人 全包</td></tr>
+  <tr><td><code>views/accounts_view.py</code></td><td>新增/編輯/刪除/測試連線 全包；連線失敗已 return，再加 step 記原因</td></tr>
+  <tr><td><code>services/repo_sync.py</code></td><td>sync 收 logger，render/skip/PUT 逐筆 step；抓檔失敗記原因（取代靜默 None）</td></tr>
+  <tr><td><code>services/probes.py</code></td><td>probe_broker / fetch_account_id 例外回傳含步驟與值（不只一行字）</td></tr>
+  <tr><td>CI（兩 repo）</td><td><code>check_no_silent.py</code> lint</td></tr>
+</table>
+
+<!-- ════════════════ 七、測試 ════════════════ -->
+<h2 id="g">七、測試計劃</h2>
+<table>
+  <tr><th>ID</th><th>測試</th><th>預期</th><th>類</th></tr>
+  <tr><td>L-01</td><td>按鈕 action 記 start+end</td><td>JSONL 出現對應 aid 的 start 與 end</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-02</td><td>handler 內例外</td><td>記 fail + traceback，且例外往上拋（不吞）</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-03</td><td>gh 回非零</td><td>step 狀態 warn，detail 含 rc/err</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-04</td><td>sync skip-no-template</td><td>對話框顯示 ⚠ 並列出該 path（非 ✅）</td><td><span class="tag t-test">整合</span></td></tr>
+  <tr><td>L-05</td><td>抓檔失敗</td><td>step fail 含原因（如 rc/SSL），不靜默 None</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-06</td><td>R1 lint：bare except</td><td>check_no_silent 對樣本紅燈</td><td><span class="tag t-test">CI</span></td></tr>
+  <tr><td>L-07</td><td>JSONL 持久 + 日誌分頁顯示</td><td>寫檔成功；分頁 append 對應列</td><td><span class="tag t-test">整合</span></td></tr>
+  <tr><td>L-08</td><td>R5：所有按鈕都包 action</td><td>introspection 掃描無漏網 handler</td><td><span class="tag t-test">整合</span></td></tr>
+  <tr><td>L-09</td><td>結果對話框不假成功</td><td>有 problem 時必為 warn 對話框</td><td><span class="tag t-test">單元</span></td></tr>
+  <tr><td>L-10</td><td>同 aid 分群</td><td>一次按鈕的所有 step 共用同一 aid</td><td><span class="tag t-test">單元</span></td></tr>
+</table>
+
+<hr style="border-color:#334155;margin-top:3rem">
+<p style="color:#64748b;font-size:.8rem">no-silent-death-plan.html · 2026-06-05 · 原則：寧可吵，不可靜默死亡</p>
+</body>
+</html>

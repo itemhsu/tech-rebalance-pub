@@ -48,10 +48,14 @@
           "APCA-API-SECRET-KEY": "{api_secret}"
         }
       },
-      "environments": [
-        "paper",
-        "live"
-      ],
+      "environments": {
+        "paper": {
+          "base_url": "https://paper-api.alpaca.markets"
+        },
+        "live": {
+          "base_url": "https://api.alpaca.markets"
+        }
+      },
       "market_data": {
         "data_url": "https://data.alpaca.markets",
         "latest_bars_endpoint": "/v2/stocks/bars/latest",
@@ -144,10 +148,14 @@
           "Authorization": "Bearer {api_key}"
         }
       },
-      "environments": [
-        "sandbox",
-        "live"
-      ],
+      "environments": {
+        "sandbox": {
+          "base_url": "https://sandbox.tradier.com/v1"
+        },
+        "live": {
+          "base_url": "https://api.tradier.com/v1"
+        }
+      },
       "market_data": {
         "quotes_endpoint": "/markets/quotes",
         "clock_endpoint": "/markets/clock",

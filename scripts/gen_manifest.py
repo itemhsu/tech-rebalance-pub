@@ -57,8 +57,10 @@ def _brokers() -> dict:
             continue
         bid = name[:-5]
         spec = json.loads(Path(f).read_text(encoding="utf-8"))
-        entry = dict(spec)                                   # 完整 spec（含 auth / account_discovery）
-        entry["environments"] = list((spec.get("environments") or {}).keys())
+        # 嵌入「完整 spec」原封不動（含 auth / account_discovery /
+        # environments dict（每環境 base_url）/ endpoints / response 路徑）。
+        # 不可把 environments 壓成 list — probe_broker 需要 dict 取 base_url。
+        entry = dict(spec)
         entry["required_env"] = list(ra._source_map("{PREFIX}", bid).values())
         out[bid] = entry
     return out

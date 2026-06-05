@@ -3,6 +3,7 @@
   "repo_b": [
     { "path": ".github/workflows/daily.yml",      "policy": "render", "src": "templates/daily.yml" },
     { "path": ".github/workflows/test_email.yml", "policy": "render", "src": "templates/test_email.yml" },
+    { "path": ".github/workflows/send_log.yml",   "policy": "render", "src": "templates/send_log.yml" },
     { "path": "accounts.json",                    "policy": "protected" },
     { "path": "data/.gitkeep",                    "policy": "placeholder" }
   ],

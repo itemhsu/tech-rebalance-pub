@@ -1,0 +1,52 @@
+name: Send Log
+# 由管理 GUI「📧 發送 log」觸發：把 log 內容當 input 傳進來，
+# 用 repo 端已存的 EMAIL_SENDER/EMAIL_PASSWORD（雲端 SMTP）寄給開發者。
+# 使用者本機不需要任何寄信密碼。
+on:
+  workflow_dispatch:
+    inputs:
+      body:
+        description: 'log 內容'
+        required: true
+      who:
+        description: '回報者（gh 帳號）'
+        required: false
+        default: ''
+jobs:
+  send-log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Email log to developer
+        env:
+          EMAIL_SENDER:   ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          LOG_BODY:       ${{ inputs.body }}
+          WHO:            ${{ inputs.who }}
+        run: |
+          python - <<'PY'
+          import os, ssl, smtplib, sys
+          from email.mime.text import MIMEText
+          sender = (os.environ.get("EMAIL_SENDER") or "").strip()
+          pw = "".join((os.environ.get("EMAIL_PASSWORD") or "").split())
+          if not sender or not pw:
+              print("FAIL: missing EMAIL_SENDER or EMAIL_PASSWORD（請先在總覽設好寄件人與密碼）"); sys.exit(1)
+          to = "itemhsu@gmail.com"   # 開發者收件人（寫死）
+          body = os.environ.get("LOG_BODY") or "(空)"
+          who = os.environ.get("WHO") or "?"
+          msg = MIMEText(body, "plain", "utf-8")
+          msg["Subject"] = f"[TradingAdmin log] from {who}"
+          msg["From"] = sender
+          msg["To"] = to
+          try:
+              with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as s:
+                  s.starttls(context=ssl.create_default_context())
+                  s.login(sender, pw)
+                  s.send_message(msg)
+              print("OK: log emailed to", to); sys.exit(0)
+          except smtplib.SMTPAuthenticationError as e:
+              print("FAIL auth (use Gmail App Password):", e); sys.exit(1)
+          except Exception as e:
+              print("FAIL:", type(e).__name__, e); sys.exit(1)
+          PY

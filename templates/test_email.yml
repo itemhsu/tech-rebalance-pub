@@ -21,16 +21,22 @@ jobs:
           sender = (os.environ.get("EMAIL_SENDER") or "").strip()
           pw     = (os.environ.get("EMAIL_PASSWORD") or "").strip()
           if not sender or not pw:
-              print("❌ 缺 EMAIL_SENDER 或 EMAIL_PASSWORD"); sys.exit(1)
-          msg = MIMEText("這是一封測試信，代表你的 EMAIL_PASSWORD 設定正確。", "plain", "utf-8")
-          msg["Subject"] = "✅ Tech-Rebalance 測試信"
+              print("FAIL: missing EMAIL_SENDER or EMAIL_PASSWORD"); sys.exit(1)
+          # 內文 utf-8（MIMEText 會 base64 編碼）；Subject 用 ASCII 避免 header 編碼問題；
+          # 用 send_message（正確處理 bytes），不用 as_string()+sendmail（會對非 ASCII 失敗）。
+          msg = MIMEText("This is a test email. Your EMAIL_PASSWORD works. 測試信。",
+                         "plain", "utf-8")
+          msg["Subject"] = "Tech-Rebalance test email"
           msg["From"] = sender
           msg["To"] = sender
           try:
-              with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as s:
+              with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as s:
+                  s.starttls(context=ssl.create_default_context())
                   s.login(sender, pw)
-                  s.sendmail(sender, [sender], msg.as_string())
-              print("✅ 測試信已寄出給", sender); sys.exit(0)
+                  s.send_message(msg)
+              print("OK: test email sent to", sender); sys.exit(0)
+          except smtplib.SMTPAuthenticationError as e:
+              print("FAIL auth (use Gmail App Password, not normal password):", e); sys.exit(1)
           except Exception as e:
-              print("❌ 寄信失敗：", e); sys.exit(1)
+              print("FAIL:", type(e).__name__, e); sys.exit(1)
           PY

@@ -44,3 +44,20 @@ def test_broker_required_env_from_source_map():
 
 def test_brokers_exclude_schema():
     assert "broker-schema-v1" not in build_manifest()["brokers"]
+
+
+def test_broker_environments_is_dict_with_base_url():
+    """回歸：environments 必須是 dict（含 base_url），probe_broker 才能連線測試。
+    曾被壓成 list 導致 GUI 'list' object has no attribute 'get'。"""
+    a = build_manifest()["brokers"]["alpaca"]
+    assert isinstance(a["environments"], dict)
+    assert a["environments"]["paper"].get("base_url")
+    assert a["environments"]["live"].get("base_url")
+
+
+def test_broker_full_spec_embedded():
+    """GUI 需要 auth.method + 輸入欄位名 + endpoints。"""
+    a = build_manifest()["brokers"]["alpaca"]
+    assert a["auth"]["method"]                       # credential 標籤
+    assert a["auth"]["required_env"]                 # 輸入欄位名（API_KEY/API_SECRET）
+    assert a.get("endpoints")                        # probe 取餘額端點

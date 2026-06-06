@@ -49,3 +49,11 @@ jobs:
           git commit -m "chore(daily): $(date -u +%Y-%m-%d)"
           git pull --rebase --autostash -X theirs origin main
           git push
+
+      # 生成 mvp dashboard 資料並推到 {repo}-dashboard（需 PAGES_TOKEN secret；
+      # 沒設則只在本地生成、跳過發佈，不會讓 workflow 失敗）。
+      - name: Publish dashboard data
+        if: ${{ inputs.dry_run != true }}
+        env:
+          PAGES_TOKEN: ${{ secrets.PAGES_TOKEN }}
+        run: tr-publish-dashboard

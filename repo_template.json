@@ -22,6 +22,11 @@
       "src": "templates/refresh_nav.yml"
     },
     {
+      "path": ".github/workflows/publish_dashboard.yml",
+      "policy": "render",
+      "src": "templates/publish_dashboard.yml"
+    },
+    {
       "path": "accounts.json",
       "policy": "protected"
     },

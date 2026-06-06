@@ -1,0 +1,44 @@
+name: Publish Dashboard
+# 由 GUI 在「新增帳號」「系統啟動發現缺 init page」時觸發。
+# 不交易：只查當前帳戶狀態（新帳戶建 inception init page）→ 生成 data.json → 推到 dashboard。
+# 任何日子可跑（讀報告與交易日無關）。有 state 的帳戶不動，交給交易 workflow 更新。
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TR_WORKDIR: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install engine
+        run: pip install "tech-rebalance @ git+https://github.com/itemhsu/tech-rebalance-pub@{version}"
+      - name: Publish dashboard (init page if new; never trades)
+        env:
+          ACC1_ALPACA_KEY: ${{ secrets.ACC1_ALPACA_KEY }}
+          ACC1_ALPACA_SECRET: ${{ secrets.ACC1_ALPACA_SECRET }}
+          ACC2_ALPACA_KEY: ${{ secrets.ACC2_ALPACA_KEY }}
+          ACC2_ALPACA_SECRET: ${{ secrets.ACC2_ALPACA_SECRET }}
+          ACC3_ALPACA_KEY: ${{ secrets.ACC3_ALPACA_KEY }}
+          ACC3_ALPACA_SECRET: ${{ secrets.ACC3_ALPACA_SECRET }}
+          ACC4_ALPACA_KEY: ${{ secrets.ACC4_ALPACA_KEY }}
+          ACC4_ALPACA_SECRET: ${{ secrets.ACC4_ALPACA_SECRET }}
+          ACC5_ALPACA_KEY: ${{ secrets.ACC5_ALPACA_KEY }}
+          ACC5_ALPACA_SECRET: ${{ secrets.ACC5_ALPACA_SECRET }}
+          ACC6_ALPACA_KEY: ${{ secrets.ACC6_ALPACA_KEY }}
+          ACC6_ALPACA_SECRET: ${{ secrets.ACC6_ALPACA_SECRET }}
+          PAGES_TOKEN: ${{ secrets.PAGES_TOKEN }}
+        run: tr-publish-dashboard
+      - name: Commit state (inception init pages)
+        run: |
+          git config user.name  "Dashboard Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet && echo "無新 state" && exit 0
+          git commit -m "chore(init): inception state $(date -u +%Y-%m-%d)"
+          git pull --rebase --autostash -X theirs origin main
+          git push

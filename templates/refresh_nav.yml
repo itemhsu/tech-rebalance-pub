@@ -1,0 +1,42 @@
+name: Refresh NAV
+# GUI 開帳戶分頁時觸發：唯讀查每個帳戶即時 NAV → 寫 data/nav_snapshot.json → commit。
+# 不下單、與交易路徑隔離。GUI 觸發後輪詢、讀回 nav_snapshot.json 顯示即時 NAV。
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  refresh-nav:
+    runs-on: ubuntu-latest
+    env:
+      TR_WORKDIR: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install engine
+        run: pip install "tech-rebalance @ git+https://github.com/itemhsu/tech-rebalance-pub@{version}"
+      - name: Query NAV (read-only)
+        env:
+          ACC1_ALPACA_KEY: ${{ secrets.ACC1_ALPACA_KEY }}
+          ACC1_ALPACA_SECRET: ${{ secrets.ACC1_ALPACA_SECRET }}
+          ACC2_ALPACA_KEY: ${{ secrets.ACC2_ALPACA_KEY }}
+          ACC2_ALPACA_SECRET: ${{ secrets.ACC2_ALPACA_SECRET }}
+          ACC3_ALPACA_KEY: ${{ secrets.ACC3_ALPACA_KEY }}
+          ACC3_ALPACA_SECRET: ${{ secrets.ACC3_ALPACA_SECRET }}
+          ACC4_ALPACA_KEY: ${{ secrets.ACC4_ALPACA_KEY }}
+          ACC4_ALPACA_SECRET: ${{ secrets.ACC4_ALPACA_SECRET }}
+          ACC5_ALPACA_KEY: ${{ secrets.ACC5_ALPACA_KEY }}
+          ACC5_ALPACA_SECRET: ${{ secrets.ACC5_ALPACA_SECRET }}
+          ACC6_ALPACA_KEY: ${{ secrets.ACC6_ALPACA_KEY }}
+          ACC6_ALPACA_SECRET: ${{ secrets.ACC6_ALPACA_SECRET }}
+        run: tr-refresh-nav
+      - name: Commit nav snapshot
+        run: |
+          git config user.name  "NAV Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/nav_snapshot.json
+          git diff --staged --quiet && echo "無變更" && exit 0
+          git commit -m "chore(nav): $(date -u +%Y-%m-%dT%H:%M)"
+          git pull --rebase --autostash -X theirs origin main
+          git push

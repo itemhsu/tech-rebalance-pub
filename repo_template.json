@@ -1,15 +1,47 @@
 {
   "version": "1",
   "repo_b": [
-    { "path": ".github/workflows/daily.yml",      "policy": "render", "src": "templates/daily.yml" },
-    { "path": ".github/workflows/test_email.yml", "policy": "render", "src": "templates/test_email.yml" },
-    { "path": ".github/workflows/send_log.yml",   "policy": "render", "src": "templates/send_log.yml" },
-    { "path": "accounts.json",                    "policy": "protected" },
-    { "path": "data/.gitkeep",                    "policy": "placeholder" }
+    {
+      "path": ".github/workflows/daily.yml",
+      "policy": "render",
+      "src": "templates/daily.yml"
+    },
+    {
+      "path": ".github/workflows/test_email.yml",
+      "policy": "render",
+      "src": "templates/test_email.yml"
+    },
+    {
+      "path": ".github/workflows/send_log.yml",
+      "policy": "render",
+      "src": "templates/send_log.yml"
+    },
+    {
+      "path": ".github/workflows/refresh_nav.yml",
+      "policy": "render",
+      "src": "templates/refresh_nav.yml"
+    },
+    {
+      "path": "accounts.json",
+      "policy": "protected"
+    },
+    {
+      "path": "data/.gitkeep",
+      "policy": "placeholder"
+    }
   ],
   "dashboard": [
-    { "path": ".nojekyll",     "policy": "placeholder" },
-    { "path": "index.html",    "policy": "placeholder" },
-    { "path": "accounts.json", "policy": "placeholder" }
+    {
+      "path": ".nojekyll",
+      "policy": "placeholder"
+    },
+    {
+      "path": "index.html",
+      "policy": "placeholder"
+    },
+    {
+      "path": "accounts.json",
+      "policy": "placeholder"
+    }
   ]
 }

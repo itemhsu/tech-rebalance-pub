@@ -1,8 +1,8 @@
 name: Daily rebalance (thin shell)
 on:
-  # 對帳通過前先「只手動觸發」；通過後取消下面 schedule 註解即啟用每日自動。
-  # schedule:
-  #   - cron: '15 21 * * 1-5'
+  # 每日美股收盤後自動執行（UTC 21:15＝台灣隔日 05:15，週一至週五）。預設開啟——自動。
+  schedule:
+    - cron: '15 21 * * 1-5'
   workflow_dispatch:
     inputs:
       dry_run: { description: 'dry-run（不下單）', type: boolean, default: true }

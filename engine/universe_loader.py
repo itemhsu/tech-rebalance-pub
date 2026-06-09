@@ -79,7 +79,8 @@ def _load_market_group(source: dict, market: str) -> List[str]:
     group = source.get("group")
     if not group:
         raise ValueError("market_group universe 需要 'group'（例如 'tech'）")
-    path = _ROOT / "universe" / f"{group}.{market}.json"
+    # 放在已打包的 data/（避免與根層 universe.py 模組同名衝突、且能進 wheel）
+    path = _ROOT / "data" / f"{group}.{market}.json"
     if not path.exists():
         raise FileNotFoundError(
             f"market_group universe 不存在：{path}（group={group}, market={market}）"

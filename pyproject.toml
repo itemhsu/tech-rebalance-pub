@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tech-rebalance"
-version = "1.0.16"
+version = "1.0.17"
 description = "JSON-driven 多策略多帳戶自動再平衡引擎（Alpaca / Tradier）"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -50,4 +50,4 @@ brokers = ["*.json"]
 strategies = ["*.json"]
 schemas = ["*.json"]
 # data/ 只包「引擎參考資料」兩檔；使用者 state（portfolio_state 等）不進 wheel
-data = ["universe.json", "shares_outstanding.json"]
+data = ["universe.json", "shares_outstanding.json", "tech.us.json", "tech.tw.json"]

@@ -49,7 +49,7 @@
         },
         "market": {
           "type": "string",
-          "enum": ["US_STOCK", "US_ETF", "TW_STOCK", "GLOBAL"],
+          "enum": ["US_STOCK", "US_ETF", "TW_STOCK", "ANY", "GLOBAL"],
           "default": "US_STOCK",
           "description": "[v3] Target market"
         },
@@ -519,6 +519,14 @@
             "key":  { "type": "string" }
           },
           "required": ["type", "path", "key"],
+          "additionalProperties": false
+        },
+        {
+          "properties": {
+            "type":  { "const": "market_group" },
+            "group": { "type": "string" }
+          },
+          "required": ["type", "group"],
           "additionalProperties": false
         }
       ]

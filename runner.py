@@ -302,10 +302,12 @@ def run(
 
     log.info("守門通過，trigger=%s", trigger_code)
 
-    # ── Step 4: 載入 universe ────────────────────────────────────────
-    groups = load_universe_groups(spec)
+    # ── Step 4: 載入 universe（market 由券商 spec 推定，供 market_group 解析）──
+    market = "tw" if (getattr(client, "spec", {}) or {}).get(
+        "market", {}).get("currency") == "TWD" else "us"
+    groups = load_universe_groups(spec, market)
     all_syms = sorted({s for g in groups.values() for s in g})
-    log.info("Universe：%d 檔（%d 組）", len(all_syms), len(groups))
+    log.info("Universe：%d 檔（%d 組，market=%s）", len(all_syms), len(groups), market)
 
     # ── Step 5: 抓 factor values ────────────────────────────────────
     from engine.selection import required_factors, select_portfolio

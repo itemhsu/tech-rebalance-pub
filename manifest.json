@@ -1,6 +1,6 @@
 {
   "manifest_version": "1",
-  "engine_version": "1.0.14",
+  "engine_version": "1.0.15",
   "data_schema": "1.0",
   "strategies": [
     "bench_0050",
@@ -19,12 +19,12 @@
     "tech100_mom_12m_t10",
     "tech100_mom_3m_t10",
     "tech100_mom_6m_t10",
+    "tech_mom_6m_t10",
+    "tech_top10",
     "top10",
     "top10_v3",
     "top9psq",
     "toprank_v3",
-    "tw_tech_mom_6m_t10",
-    "tw_tech_top10",
     "us100_mom_12m_t10",
     "us100_mom_3m_t10",
     "us100_mom_6m_t10",

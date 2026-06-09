@@ -71,30 +71,52 @@ _SOURCE_LOADERS = {
 }
 
 
-def _load_source(source: dict, context: str) -> List[str]:
+def _load_market_group(source: dict, market: str) -> List[str]:
+    """market_group：依市場載入 universe/<group>.<market>.json 的 symbols。
+
+    讓「同一支策略、股池由市場決定」成立（市場由券商推定，見 runner）。
+    """
+    group = source.get("group")
+    if not group:
+        raise ValueError("market_group universe 需要 'group'（例如 'tech'）")
+    path = _ROOT / "universe" / f"{group}.{market}.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"market_group universe 不存在：{path}（group={group}, market={market}）"
+        )
+    data = json.loads(path.read_text(encoding="utf-8"))
+    syms = data.get("symbols")
+    if not isinstance(syms, list):
+        raise TypeError(f"{path} 缺 'symbols' list（market_group 格式）")
+    return [str(s).upper() for s in syms]
+
+
+def _load_source(source: dict, context: str, market: str = "us") -> List[str]:
     st = source.get("type")
+    if st == "market_group":
+        return _load_market_group(source, market)
     loader = _SOURCE_LOADERS.get(st)
     if loader is None:
         raise ValueError(
             f"{context}.source.type={st!r} 不支援；"
-            f"請用 {sorted(_SOURCE_LOADERS)} 之一"
+            f"請用 {sorted(list(_SOURCE_LOADERS) + ['market_group'])} 之一"
         )
     return loader(source)
 
 
-def load_universe_groups(spec: dict) -> Dict[str, List[str]]:
-    """從 spec.universe 解析 {group_id: [symbols]}。"""
+def load_universe_groups(spec: dict, market: str = "us") -> Dict[str, List[str]]:
+    """從 spec.universe 解析 {group_id: [symbols]}。market 供 market_group 解析用。"""
     u = spec.get("universe", {})
     utype = u.get("type")
 
     if utype == "single":
-        return {"__all__": _load_source(u.get("source", {}), "universe")}
+        return {"__all__": _load_source(u.get("source", {}), "universe", market)}
 
     if utype == "grouped":
         out: Dict[str, List[str]] = {}
         for g in u.get("groups", []):
             gid = g["id"]
-            out[gid] = _load_source(g.get("source", {}), f"universe.groups[{gid}]")
+            out[gid] = _load_source(g.get("source", {}), f"universe.groups[{gid}]", market)
         return out
 
     raise ValueError(

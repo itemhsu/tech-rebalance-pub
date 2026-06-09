@@ -32,12 +32,20 @@ class Account:
     runner_sub_id: Optional[str] = None
     # 帳戶生命週期：歷經的策略段（縫合 NAV 歷史用）。每段 {strategy,label,data_dir}
     strategy_history: Optional[list] = None
+    # 多券商欄位（缺 broker 會讓 refresh_nav 等誤判為 alpaca → 金鑰名稱錯）
+    broker: Optional[str] = None
+    environment: Optional[str] = None
+    secret_prefix: Optional[str] = None
+    use_new_runner: Optional[bool] = None
+    email_recipients: Optional[list] = None
 
 
 # 已知欄位集合：超出此集合的 key 會被靜默忽略（保留向前相容性）
 _KNOWN_FIELDS = {"id", "strategy", "label",
                  "enabled", "alpaca_secret_prefix", "data_dir", "runner_sub_id",
-                 "strategy_history"}
+                 "strategy_history",
+                 "broker", "environment", "secret_prefix",
+                 "use_new_runner", "email_recipients"}
 
 
 # ── 讀取 ──────────────────────────────────────────────────────────────────────

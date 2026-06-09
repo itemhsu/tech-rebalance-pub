@@ -170,11 +170,20 @@ class SinoPacClient(BrokerClient):
                                 fallback=("IntradayOdd" if self._odd_lot else "Common"))
         rod = self._const("constant", "OrderType", "ROD", fallback="ROD")
 
-        order = api.Order(
+        # shioaji 1.5+ 改用 StockOrder()，舊版用 Order()
+        _order_factory = getattr(api, "StockOrder", None) or api.Order
+        order = _order_factory(
             price=0, quantity=shares, action=action,
             price_type=price_type, order_type=rod, order_lot=order_lot,
         )
-        trade = api.place_order(contract, order)
+        try:
+            trade = api.place_order(contract, order)
+        except Exception as e:   # noqa: BLE001  把「未簽署」翻成清楚訊息
+            if "sign" in str(e).lower():
+                raise BrokerError(
+                    "永豐帳戶尚未簽署『證券 API』條款（signed=False）。"
+                    "請到永豐簽署中心簽署後再下單。") from e
+            raise
         oid = ""
         status = "new"
         msg = ""

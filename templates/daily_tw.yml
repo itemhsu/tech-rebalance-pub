@@ -36,6 +36,12 @@ jobs:
           ACC4_API_SECRET: ${{ secrets.ACC4_API_SECRET }}
           ACC5_API_KEY:    ${{ secrets.ACC5_API_KEY }}
           ACC5_API_SECRET: ${{ secrets.ACC5_API_SECRET }}
+          ACC6_API_KEY:    ${{ secrets.ACC6_API_KEY }}
+          ACC6_API_SECRET: ${{ secrets.ACC6_API_SECRET }}
+          ACC7_API_KEY:    ${{ secrets.ACC7_API_KEY }}
+          ACC7_API_SECRET: ${{ secrets.ACC7_API_SECRET }}
+          ACC8_API_KEY:    ${{ secrets.ACC8_API_KEY }}
+          ACC8_API_SECRET: ${{ secrets.ACC8_API_SECRET }}
           EMAIL_SENDER:       ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD:     ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_RECIPIENT:    ${{ secrets.EMAIL_RECIPIENT }}

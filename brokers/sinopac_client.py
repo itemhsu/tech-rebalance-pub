@@ -117,8 +117,25 @@ class SinoPacClient(BrokerClient):
     def get_account_balance(self) -> AccountBalance:
         api = self._ensure_api()
         bal = api.account_balance()
-        cash = float(getattr(bal, "acc_balance", None)
-                     if not isinstance(bal, dict) else bal.get("acc_balance", 0) or 0)
+        # 首次對拍 debug：印原始回應（workflow log 可見），確認欄位名 + 是否真為 0。
+        try:
+            import sys as _sys
+            print(f"[sinopac] account_balance raw: {bal!r}", file=_sys.stderr)
+        except Exception:   # noqa: BLE001
+            pass
+
+        def _num(obj, *names) -> float:
+            for n in names:
+                v = obj.get(n) if isinstance(obj, dict) else getattr(obj, n, None)
+                if v is not None:
+                    try:
+                        return float(v)
+                    except (TypeError, ValueError):
+                        continue
+            return 0.0
+
+        # acc_balance 為 Shioaji 主要欄位；其餘為不同版本/型態的後援
+        cash = _num(bal, "acc_balance", "available_balance", "cash", "settled_cash")
         pos_value = sum(p.market_value for p in self.get_positions())
         nav = cash + pos_value
         return AccountBalance(nav=nav, cash=cash, buying_power=cash, currency="TWD")

@@ -144,6 +144,25 @@ class BrokerClient(ABC):
     def wait_for_fills(self, order_ids: List[str], timeout_seconds: int = 120) -> None:
         """阻塞等待指定訂單成交（市場開盤時才用，休市時建議不呼叫）。"""
 
+    # ── compat 預設實作（runner/refresh_nav 用；SDK 券商如永豐免自己重寫）──────
+    def get_account_nav(self) -> tuple:
+        """[compat] 回 (nav, cash)；預設由 get_account_balance() 衍生。"""
+        b = self.get_account_balance()
+        return b.nav, b.cash
+
+    def get_current_positions(self) -> list:
+        """[compat] 回 portfolio.Position list；預設由 get_positions() 轉換。"""
+        from portfolio import Position as _PP
+        out = []
+        for p in self.get_positions():
+            out.append(_PP(
+                symbol=p.symbol, qty=p.qty, avg_entry_price=p.avg_entry_price,
+                current_price=p.current_price, market_value=p.market_value,
+                unrealized_pl=p.unrealized_pl,
+                unrealized_plpc=getattr(p, "unrealized_plpc", 0.0),
+            ))
+        return out
+
     # ── 共用 helpers ─────────────────────────────────────────────────────
 
     def check_capability(self, key: str, value: Any) -> None:

@@ -16,8 +16,11 @@ jobs:
         with: { python-version: "3.11" }
       - name: Install engine
         run: pip install "tech-rebalance @ git+https://github.com/itemhsu/tech-rebalance-pub@{version}"
+      - name: Install SinoPac SDK (台股帳戶查 NAV 用；無台股帳戶也無妨)
+        run: pip install shioaji || echo "shioaji 安裝失敗，台股帳戶 NAV 將略過"
       - name: Query NAV (read-only)
         env:
+          # Alpaca/Tradier 系（_ALPACA_*）
           ACC1_ALPACA_KEY: ${{ secrets.ACC1_ALPACA_KEY }}
           ACC1_ALPACA_SECRET: ${{ secrets.ACC1_ALPACA_SECRET }}
           ACC2_ALPACA_KEY: ${{ secrets.ACC2_ALPACA_KEY }}
@@ -30,6 +33,19 @@ jobs:
           ACC5_ALPACA_SECRET: ${{ secrets.ACC5_ALPACA_SECRET }}
           ACC6_ALPACA_KEY: ${{ secrets.ACC6_ALPACA_KEY }}
           ACC6_ALPACA_SECRET: ${{ secrets.ACC6_ALPACA_SECRET }}
+          # 永豐(SinoPac) 系（_API_KEY/_API_SECRET）
+          ACC1_API_KEY: ${{ secrets.ACC1_API_KEY }}
+          ACC1_API_SECRET: ${{ secrets.ACC1_API_SECRET }}
+          ACC2_API_KEY: ${{ secrets.ACC2_API_KEY }}
+          ACC2_API_SECRET: ${{ secrets.ACC2_API_SECRET }}
+          ACC3_API_KEY: ${{ secrets.ACC3_API_KEY }}
+          ACC3_API_SECRET: ${{ secrets.ACC3_API_SECRET }}
+          ACC4_API_KEY: ${{ secrets.ACC4_API_KEY }}
+          ACC4_API_SECRET: ${{ secrets.ACC4_API_SECRET }}
+          ACC5_API_KEY: ${{ secrets.ACC5_API_KEY }}
+          ACC5_API_SECRET: ${{ secrets.ACC5_API_SECRET }}
+          ACC6_API_KEY: ${{ secrets.ACC6_API_KEY }}
+          ACC6_API_SECRET: ${{ secrets.ACC6_API_SECRET }}
         run: tr-refresh-nav
       - name: Commit nav snapshot
         run: |

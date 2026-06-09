@@ -70,15 +70,19 @@ def fetch_factor_values(
     all_symbols: List[str],
     api_key: str,
     api_secret: str,
+    market: str = "us",
 ) -> Dict[str, Dict[str, float]]:
-    """從 Alpaca 抓所需 factor values。
+    """抓所需 factor values。資料源依市場：us→Alpaca、tw→yfinance(.TW)。
 
     支援的 factor：
       "price"           — 最新收盤
       "market_cap"      — price × shares_outstanding
       "price_momentum_Nm" — N 個月動能
     """
-    import market_cap as mc
+    if market == "tw":
+        from engine import yf_factors as mc   # 台股：yfinance（.TW），不需 API key
+    else:
+        import market_cap as mc               # 美股：Alpaca（即時 IEX）
 
     out: Dict[str, Dict[str, float]] = {}
 
@@ -89,9 +93,9 @@ def fetch_factor_values(
             all_symbols, api_key=api_key, secret_key=api_secret,
         )
 
-    # 2. market_cap = price × shares
+    # 2. market_cap = price × shares（台股股數也走 yfinance）
     if "market_cap" in needed:
-        shares = _load_shares(all_symbols)
+        shares = mc.load_shares(all_symbols) if market == "tw" else _load_shares(all_symbols)
         prices = out["price"]
         out["market_cap"] = {
             s: prices[s] * shares[s]
@@ -316,8 +320,9 @@ def run(
 
     factor_values = fetch_factor_values(
         needed, all_syms,
-        api_key=client.api_key,
-        api_secret=client.api_secret,
+        api_key=getattr(client, "api_key", ""),
+        api_secret=getattr(client, "api_secret", ""),
+        market=market,
     )
     log.info("已取得 %d 個 factor", len(factor_values))
 

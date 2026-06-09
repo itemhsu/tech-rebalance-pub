@@ -1,6 +1,6 @@
 {
   "manifest_version": "1",
-  "engine_version": "1.0.17",
+  "engine_version": "1.0.18",
   "data_schema": "1.0",
   "strategies": [
     "bench_0050",

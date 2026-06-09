@@ -110,15 +110,45 @@ def run_account(
     return result.returncode
 
 
-def run_all_accounts(dry_run: bool = False, date_override: str = "") -> None:
-    """依序執行所有 enabled 帳戶。任一帳戶失敗不中止後續。"""
+_TW_BROKERS = {"sinopac"}
+
+
+def _account_market(acct: dict) -> str:
+    """回該帳戶所屬市場 'tw'/'us'，依券商 spec 的 market.currency 判定（TWD→tw）。
+
+    讀 broker spec 失敗時退回券商名稱表（sinopac→tw，其餘→us）。
+    """
+    broker = acct.get("broker", "alpaca")
+    try:
+        from brokers.registry import load_broker_spec
+        spec = load_broker_spec(broker)
+        ccy = ((spec.get("market") or {}).get("currency") or "USD").upper()
+        return "tw" if ccy == "TWD" else "us"
+    except Exception:   # noqa: BLE001  spec 缺/壞不可擋住其他帳戶
+        return "tw" if broker in _TW_BROKERS else "us"
+
+
+def run_all_accounts(dry_run: bool = False, date_override: str = "",
+                     market: str | None = None) -> None:
+    """依序執行所有 enabled 帳戶。任一帳戶失敗不中止後續。
+
+    market='tw'/'us' 時只跑該市場帳戶（依券商判定），供台股/美股各自的排程分流。
+    """
     accounts = _load_accounts_json()
     results = {}
     for acct in accounts:
         if not acct.get("enabled", True):
             continue
+        if market and _account_market(acct) != market:
+            log.info("帳戶 #%s 市場=%s ≠ --market=%s，跳過",
+                     acct.get("id"), _account_market(acct), market)
+            continue
         rc = run_account(acct["id"], dry_run=dry_run, date_override=date_override)
         results[acct["id"]] = "success" if rc == 0 else "failure"
+
+    if not results:
+        log.info("沒有符合 --market=%s 的 enabled 帳戶", market)
+        return
 
     log.info("=" * 60)
     log.info("全部帳戶執行結果：")
@@ -283,10 +313,18 @@ def main(argv: list[str] | None = None) -> int:
         metavar="YYYY-MM-DD",
         help="強制指定執行日期（測試用）",
     )
+    parser.add_argument(
+        "--market",
+        choices=["tw", "us"],
+        default=None,
+        help="只跑指定市場的帳戶（依券商判定；台股/美股各自排程分流用）。"
+             "搭配 --account all 使用。",
+    )
     args = parser.parse_args(argv)
 
     if args.account.lower() == "all":
-        run_all_accounts(dry_run=args.dry_run, date_override=args.date_override)
+        run_all_accounts(dry_run=args.dry_run, date_override=args.date_override,
+                         market=args.market)
         return 0
     return run_account(args.account, dry_run=args.dry_run, date_override=args.date_override)
 

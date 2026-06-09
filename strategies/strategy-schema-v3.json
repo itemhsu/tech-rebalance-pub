@@ -43,13 +43,13 @@
         "benchmark":   { "type": "string" },
         "asset_class": {
           "type": "string",
-          "enum": ["equity", "etf", "crypto", "mixed"],
+          "enum": ["equity", "etf", "index", "crypto", "mixed"],
           "default": "equity",
           "description": "[v3] Asset class for this strategy"
         },
         "market": {
           "type": "string",
-          "enum": ["US_STOCK", "US_ETF", "GLOBAL"],
+          "enum": ["US_STOCK", "US_ETF", "TW_STOCK", "GLOBAL"],
           "default": "US_STOCK",
           "description": "[v3] Target market"
         },
@@ -425,7 +425,7 @@
         "include_slippage":    { "type": "boolean" },
         "include_commission":  { "type": "boolean" },
         "color":               { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "description": "tool_v2 dashboard line/bar color" },
-        "group":               { "type": "string", "enum": ["momentum", "diversified", "benchmark", "hedged", "weekly", "other"], "description": "tool_v2 grouping in sidebar" },
+        "group":               { "type": "string", "enum": ["momentum", "diversified", "benchmark", "hedged", "weekly", "tw", "other"], "description": "tool_v2 grouping in sidebar" },
         "order":               { "type": "integer", "description": "tool_v2 display order" },
         "label":               { "type": "string", "description": "tool_v2 short label (defaults to meta.name)" },
         "enabled":             { "type": "boolean", "description": "tool_v2 include in backtest (defaults to true)" },

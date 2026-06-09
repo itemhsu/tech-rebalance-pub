@@ -1,8 +1,9 @@
-name: Daily rebalance (thin shell)
+name: Daily rebalance — 台股 (TW)
 on:
-  # 每日美股收盤後自動執行（UTC 21:15＝台灣隔日 05:15，週一至週五）。預設開啟——自動。
+  # 台股 13:30 收盤（Asia/Taipei = UTC+8）= 05:30 UTC；收盤後約 30 分跑。
+  # UTC 06:00 = 台灣 14:00，週一至週五。預設開啟——自動。
   schedule:
-    - cron: '15 21 * * 1-5'
+    - cron: '0 6 * * 1-5'
   workflow_dispatch:
     inputs:
       dry_run: { description: 'dry-run（不下單）', type: boolean, default: true }
@@ -10,7 +11,7 @@ on:
 permissions:
   contents: write
 jobs:
-  daily:
+  daily-tw:
     runs-on: ubuntu-latest
     env:
       TR_WORKDIR: ${{ github.workspace }}
@@ -20,39 +21,44 @@ jobs:
         with: { python-version: "3.11" }
       - name: Install engine (public repo, no token)
         run: pip install "tech-rebalance @ git+https://github.com/itemhsu/tech-rebalance-pub@{version}"
-      - name: Run all accounts
+      - name: Install SinoPac SDK (台股下單)
+        run: pip install shioaji
+      - name: Run TW accounts
         env:
-          ACC1_ALPACA_KEY:    ${{ secrets.ACC1_ALPACA_KEY }}
-          ACC1_ALPACA_SECRET: ${{ secrets.ACC1_ALPACA_SECRET }}
-          ACC2_ALPACA_KEY:    ${{ secrets.ACC2_ALPACA_KEY }}
-          ACC2_ALPACA_SECRET: ${{ secrets.ACC2_ALPACA_SECRET }}
-          ACC3_ALPACA_KEY:    ${{ secrets.ACC3_ALPACA_KEY }}
-          ACC3_ALPACA_SECRET: ${{ secrets.ACC3_ALPACA_SECRET }}
+          # 永豐(SinoPac) 金鑰：ACC{id}_API_KEY / ACC{id}_API_SECRET（依 spec.auth.required_env）
+          ACC1_API_KEY:    ${{ secrets.ACC1_API_KEY }}
+          ACC1_API_SECRET: ${{ secrets.ACC1_API_SECRET }}
+          ACC2_API_KEY:    ${{ secrets.ACC2_API_KEY }}
+          ACC2_API_SECRET: ${{ secrets.ACC2_API_SECRET }}
+          ACC3_API_KEY:    ${{ secrets.ACC3_API_KEY }}
+          ACC3_API_SECRET: ${{ secrets.ACC3_API_SECRET }}
+          ACC4_API_KEY:    ${{ secrets.ACC4_API_KEY }}
+          ACC4_API_SECRET: ${{ secrets.ACC4_API_SECRET }}
+          ACC5_API_KEY:    ${{ secrets.ACC5_API_KEY }}
+          ACC5_API_SECRET: ${{ secrets.ACC5_API_SECRET }}
           EMAIL_SENDER:       ${{ secrets.EMAIL_SENDER }}
           EMAIL_PASSWORD:     ${{ secrets.EMAIL_PASSWORD }}
           EMAIL_RECIPIENT:    ${{ secrets.EMAIL_RECIPIENT }}
           PAGES_TOKEN:        ${{ secrets.PAGES_TOKEN }}
           FORCE_REBALANCE:    ${{ inputs.force }}
         run: |
-          # --market us：只跑美股帳戶；台股帳戶由 daily_tw.yml 在台股收盤後跑。
+          # --market tw：只跑台股帳戶（依券商 spec.market.currency=TWD 判定）。
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            run-account --account all --market us --dry-run
+            run-account --account all --market tw --dry-run
           else
-            run-account --account all --market us
+            run-account --account all --market tw
           fi
       - name: Commit data
-        if: ${{ inputs.dry_run != true }}   # dry-run 不 commit（避免污染冪等守門）
+        if: ${{ inputs.dry_run != true }}
         run: |
-          git config user.name  "Daily Bot"
+          git config user.name  "Daily TW Bot"
           git config user.email "bot@users.noreply.github.com"
           git add data/
           git diff --staged --quiet && exit 0
-          git commit -m "chore(daily): $(date -u +%Y-%m-%d)"
+          git commit -m "chore(daily-tw): $(date -u +%Y-%m-%d)"
           git pull --rebase --autostash -X theirs origin main
           git push
 
-      # 生成 mvp dashboard 資料並推到 {repo}-dashboard（需 PAGES_TOKEN secret；
-      # 沒設則只在本地生成、跳過發佈，不會讓 workflow 失敗）。
       - name: Publish dashboard data
         if: ${{ inputs.dry_run != true }}
         env:

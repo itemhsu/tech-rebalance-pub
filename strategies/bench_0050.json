@@ -1,0 +1,66 @@
+{
+  "$schema": "strategy-schema-v3.json",
+  "id": "bench_0050",
+  "version": "1.0",
+  "schema_version": "3.0.0",
+
+  "meta": {
+    "name": "0050 元大台灣50",
+    "description": "0050.TW buy & hold 基準",
+    "author": "itemhsu",
+    "created_at": "2026-06-09",
+    "tags": ["benchmark", "etf", "passive", "台股"],
+    "benchmark": "0050",
+    "asset_class": "etf",
+    "market": "TW_STOCK",
+    "enabled": false
+  },
+
+  "universe": {
+    "type": "single",
+    "source": { "type": "inline", "symbols": ["0050.TW"] }
+  },
+
+  "selection": { "method": "buy_and_hold", "n": 1 },
+
+  "portfolio": {
+    "weighting": "equal",
+    "target_n": 1,
+    "max_weight_pct": 100,
+    "allow_fractional_shares": true
+  },
+
+  "rebalancing": {
+    "frequency": "none",
+    "rebalance_on": "first_trading_day",
+    "timezone": "Asia/Taipei",
+    "trigger": { "type": "any", "conditions": [{ "kind": "scheduled" }] },
+    "order_type": "market",
+    "sell_before_buy": false
+  },
+
+  "risk": { "max_single_position_pct": 100, "min_positions": 1 },
+
+  "backtest": {
+    "initial_cash": 1000000,
+    "start_date": "2015-01-01",
+    "color": "#3b82f6",
+    "group": "benchmark",
+    "order": 901,
+    "label": "0050",
+    "enabled": true
+  },
+
+  "dashboard": {
+    "title": "0050 基準",
+    "accent_color": "#3b82f6",
+    "portfolio_label": "0050.TW",
+    "rankings": { "type": "market_cap_list", "title": "0050", "show_top_n": 1 }
+  },
+
+  "email": {
+    "subject_template": "[{date}] 0050 NAV NT${nav}",
+    "recipients_env": "EMAIL_RECIPIENT",
+    "sections": ["kpi"]
+  }
+}

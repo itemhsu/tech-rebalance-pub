@@ -1,10 +1,12 @@
 {
   "manifest_version": "1",
-  "engine_version": "1.0.6",
+  "engine_version": "1.0.11",
   "data_schema": "1.0",
   "strategies": [
+    "bench_0050",
     "bench_nasdaq100",
     "bench_sp500",
+    "bench_taiex",
     "d2p2t6",
     "d2p2t6_mom6m",
     "d2p2t6_v3",
@@ -21,6 +23,8 @@
     "top10_v3",
     "top9psq",
     "toprank_v3",
+    "tw_tech_mom_6m_t10",
+    "tw_tech_top10",
     "us100_mom_12m_t10",
     "us100_mom_3m_t10",
     "us100_mom_6m_t10",
@@ -126,6 +130,63 @@
       "required_env": [
         "{PREFIX}_ALPACA_KEY",
         "{PREFIX}_ALPACA_SECRET"
+      ]
+    },
+    "sinopac": {
+      "$schema": "broker-schema-v2.json",
+      "id": "sinopac",
+      "version": "1.0",
+      "display_name": "永豐金證券 (SinoPac)",
+      "country": "TW",
+      "website": "https://www.sinotrade.com.tw",
+      "integration": {
+        "type": "sdk",
+        "client_class": "brokers.sinopac_client.SinoPacClient",
+        "sdk_package": "shioaji"
+      },
+      "auth": {
+        "method": "sdk_login",
+        "required_env": [
+          "{PREFIX}_API_KEY",
+          "{PREFIX}_API_SECRET"
+        ]
+      },
+      "environments": {
+        "paper": {
+          "simulation": true
+        }
+      },
+      "capabilities": {
+        "fractional_shares": true,
+        "asset_classes": [
+          "tw_equity"
+        ],
+        "order_types": [
+          "market",
+          "limit"
+        ],
+        "time_in_force": [
+          "day"
+        ],
+        "extended_hours": false,
+        "lot_size": 1000,
+        "odd_lot_supported": true,
+        "order_mode": "odd_lot",
+        "price_limit_pct": 10,
+        "commission_per_trade": 0.0
+      },
+      "market": {
+        "timezone": "Asia/Taipei",
+        "open_time": "09:00",
+        "close_time": "13:30",
+        "currency": "TWD"
+      },
+      "rate_limits": {
+        "requests_per_minute": 500
+      },
+      "required_env": [
+        "{PREFIX}_API_KEY",
+        "{PREFIX}_API_SECRET"
       ]
     },
     "tradier": {

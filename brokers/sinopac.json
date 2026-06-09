@@ -1,0 +1,47 @@
+{
+  "$schema": "broker-schema-v2.json",
+  "id": "sinopac",
+  "version": "1.0",
+  "display_name": "永豐金證券 (SinoPac)",
+  "country": "TW",
+  "website": "https://www.sinotrade.com.tw",
+
+  "integration": {
+    "type": "sdk",
+    "client_class": "brokers.sinopac_client.SinoPacClient",
+    "sdk_package": "shioaji"
+  },
+
+  "auth": {
+    "method": "sdk_login",
+    "required_env": ["{PREFIX}_API_KEY", "{PREFIX}_API_SECRET"]
+  },
+
+  "environments": {
+    "paper": { "simulation": true }
+  },
+
+  "capabilities": {
+    "fractional_shares": true,
+    "asset_classes": ["tw_equity"],
+    "order_types": ["market", "limit"],
+    "time_in_force": ["day"],
+    "extended_hours": false,
+    "lot_size": 1000,
+    "odd_lot_supported": true,
+    "order_mode": "odd_lot",
+    "price_limit_pct": 10,
+    "commission_per_trade": 0.0
+  },
+
+  "market": {
+    "timezone": "Asia/Taipei",
+    "open_time": "09:00",
+    "close_time": "13:30",
+    "currency": "TWD"
+  },
+
+  "rate_limits": {
+    "requests_per_minute": 500
+  }
+}

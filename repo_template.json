@@ -7,6 +7,11 @@
       "src": "templates/daily.yml"
     },
     {
+      "path": ".github/workflows/daily_tw.yml",
+      "policy": "render",
+      "src": "templates/daily_tw.yml"
+    },
+    {
       "path": ".github/workflows/test_email.yml",
       "policy": "render",
       "src": "templates/test_email.yml"

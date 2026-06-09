@@ -177,14 +177,25 @@ class SinoPacClient(BrokerClient):
         trade = api.place_order(contract, order)
         oid = ""
         status = "new"
+        msg = ""
         o = getattr(trade, "order", None)
         if o is not None:
             oid = str(getattr(o, "id", "") or "")
         st = getattr(trade, "status", None)
         if st is not None:
             status = str(getattr(st, "status", status) or status)
+            msg = str(getattr(st, "msg", "") or "")
+        # 模擬委託成功＝狀態 PendingSubmit/Submitted（官方測試準則，與有無資金無關）
+        ok = status in ("PendingSubmit", "PreSubmitted", "Submitted", "Filled",
+                        "Filling", "PartFilled")
+        try:
+            import sys as _sys
+            print(f"[sinopac] place_order {symbol} x{shares} {side} → "
+                  f"status={status} msg={msg!r} ok={ok}", file=_sys.stderr)
+        except Exception:   # noqa: BLE001
+            pass
         return OrderResult(order_id=oid, symbol=symbol, side=side, qty=shares,
-                           status=status, raw={})
+                           status=status, raw={"status": status, "msg": msg, "ok": ok})
 
     def cancel_all_open_orders(self) -> int:
         api = self._ensure_api()

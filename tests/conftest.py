@@ -32,12 +32,6 @@ _ENV_MODULES = {
     "test_email_renderer":    (["accounts.json"], _RUNTIME),
     "test_unit2_accounts":    (["accounts.json"], _RUNTIME),
     "test_from_env":          (["accounts.json"], _RUNTIME),
-    # ── 誠實邊界：以下兩者非「CI 執行期產物」，理由據實說明 ──
-    "test_repo_b_template": (
-        ["examples/repo-b-template/.github/workflows/daily.yml"],
-        "example-template asset never committed to the pub repo; "
-        "NOT a CI runtime artifact",
-    ),
 }
 
 

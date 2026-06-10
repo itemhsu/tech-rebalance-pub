@@ -48,6 +48,7 @@ def main() -> int:
         return 1
 
     status = (res.raw or {}).get("status", res.status)
+    status = str(status).split(".")[-1]   # enum 前綴防呆（OrderStatus.PendingSubmit→PendingSubmit）
     msg = (res.raw or {}).get("msg", "")
     ok = status in _OK_STATUS
     print(f"[selftest] order_id={res.order_id}  status={status}  msg={msg!r}")

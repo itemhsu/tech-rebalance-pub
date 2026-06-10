@@ -192,7 +192,10 @@ class SinoPacClient(BrokerClient):
             oid = str(getattr(o, "id", "") or "")
         st = getattr(trade, "status", None)
         if st is not None:
-            status = str(getattr(st, "status", status) or status)
+            raw_status = getattr(st, "status", status)
+            # Shioaji 回 enum（如 OrderStatus.PendingSubmit）→ 取裸名，
+            # 否則與裸字串比對會永遠 False。
+            status = getattr(raw_status, "name", None) or str(raw_status).split(".")[-1]
             msg = str(getattr(st, "msg", "") or "")
         # 模擬委託成功＝狀態 PendingSubmit/Submitted（官方測試準則，與有無資金無關）
         ok = status in ("PendingSubmit", "PreSubmitted", "Submitted", "Filled",

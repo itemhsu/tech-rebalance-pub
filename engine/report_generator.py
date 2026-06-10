@@ -318,13 +318,17 @@ def generate_all(output_dir: Path, dry_run: bool = False,
     results = {}
     for acct in accounts:
         try:
-            if not can_generate(acct):                   # 策略 JSON 載不起來
-                logger.error("#%s 策略 %s 載入失敗", acct.id, acct.strategy)
-                results[acct.id] = "fail"
+            if not can_generate(acct):
+                # 此引擎版本載不起該策略（例：跨市場/跨版本帳戶，其報告由對應的
+                # workflow＋引擎產生）→ 略過，不是失敗。報告產生不該與「本引擎是否
+                # 認得每支策略」耦合；硬當失敗會讓整批 daily job 誤判失敗。
+                logger.warning("#%s 策略 %s 本引擎版本載不起來 → 略過（非本工作流職責）",
+                               acct.id, acct.strategy)
+                results[acct.id] = "skip"
                 continue
             results[acct.id] = generate_for_account(acct, output_dir, dry_run,
                                                     peer_max_date=peer_max_date)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  真正的產生錯誤才算 fail
             logger.error("產生 #%s 失敗：%s", acct.id, exc)
             results[acct.id] = "fail"
     return results

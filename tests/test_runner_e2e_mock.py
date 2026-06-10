@@ -32,7 +32,7 @@ def test_runner_full_flow_mocked(tmp_path, monkeypatch):
     prices = {s: 100.0 + i for i, s in enumerate(universe)}
     mcaps = {s: (1_000_000_000 * (25 - i)) for i, s in enumerate(universe)}
 
-    def fake_fetch_factor_values(needed, all_symbols, api_key, api_secret):
+    def fake_fetch_factor_values(needed, all_symbols, api_key, api_secret, market="us"):
         out = {"price": prices, "market_cap": mcaps}
         return out
 
@@ -131,7 +131,7 @@ def test_runner_dry_run_bypasses_monthly_guard(tmp_path, monkeypatch):
     prices = {s: 100.0 for s in universe}
     mcaps = {s: 1e9 for s in universe}
 
-    def fake_fetch(needed, all_symbols, api_key, api_secret):
+    def fake_fetch(needed, all_symbols, api_key, api_secret, market="us"):
         return {"price": prices, "market_cap": mcaps}
     monkeypatch.setattr(runner, "fetch_factor_values", fake_fetch)
 

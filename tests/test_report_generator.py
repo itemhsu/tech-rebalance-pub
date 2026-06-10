@@ -10,6 +10,15 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+# accounts.json 是執行期產物（run-account / 部署時 provision），fresh clone 沒有 →
+# 整個模組以指名理由 skip，不靜默、不假綠。
+if not (ROOT / "accounts.json").exists():
+    pytest.skip(
+        "requires runtime artifact: accounts.json — provisioned at runtime by "
+        "run-account (CI or dev repo); absent in a fresh clone",
+        allow_module_level=True,
+    )
+
 from engine.report_generator import (
     generate_for_account, can_generate, is_grouped,
     resolve_holdings, resolve_rankings,

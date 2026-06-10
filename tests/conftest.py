@@ -38,11 +38,6 @@ _ENV_MODULES = {
         "example-template asset never committed to the pub repo; "
         "NOT a CI runtime artifact",
     ),
-    "test_backtest_spec_universe": (
-        ["engine/spec_engine.py"],
-        "backtest tool_v2 module, NOT part of the pub engine package "
-        "(cross-component test misplaced in this tree)",
-    ),
 }
 
 

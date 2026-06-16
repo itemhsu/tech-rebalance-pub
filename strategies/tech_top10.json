@@ -68,8 +68,8 @@
   },
 
   "email": {
-    "subject_template": "[TECH10 #{account_id}] {date} NAV {nav:,.0f}",
+    "subject_template": "[TECH10 #{account_id}] {date} NAV {nav:,.0f} ({today_change_pct:+.2f}%)",
     "recipients_env": "EMAIL_RECIPIENT",
-    "sections": ["kpi"]
+    "sections": ["header", "kpi", "strategy_card", "positions_table", "rankings", "trades", "cta", "strategy_history", "footer"]
   }
 }

@@ -36,6 +36,23 @@ SCHEMA_VERSION = "1.0"
 DASHBOARD_BASE_URL = "https://itemhsu.github.io/tech-rebalance-dashboard"
 
 
+def _account_currency(account: Account) -> str:
+    """依帳戶券商推幣別代碼（與 dashboard resolveCurrency 對齊）。
+
+    來源：broker spec 的 market.currency（單一真相；sinopac→TWD、alpaca/tradier→USD）。
+    載入失敗或未設則預設 USD。email_renderer / dashboard 再把 TWD→NT$、其餘→$。
+    """
+    broker = getattr(account, "broker", None) or "alpaca"
+    try:
+        from brokers.registry import load_broker_spec
+        ccy = (load_broker_spec(broker).get("market") or {}).get("currency")
+        if ccy:
+            return str(ccy)
+    except Exception:   # noqa: BLE001  券商 spec 缺失不應擋住報告
+        pass
+    return "USD"
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  Meta
 # ══════════════════════════════════════════════════════════════════════════════
@@ -49,6 +66,7 @@ def build_meta(
     strategy_start_date: Optional[str] = None,
     previous_strategy: Optional[str] = None,
     trading_date: Optional[str] = None,
+    currency: str = "USD",
 ) -> dict:
     today = trading_date or date.today().isoformat()
     return {
@@ -56,6 +74,7 @@ def build_meta(
         "strategy":         strategy_cfg["id"],
         "account_id":       account.id,
         "account_label":    account.label,
+        "currency":         currency,
         "generated_at":     datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "trading_date":     today,
         "dry_run":          dry_run,
@@ -515,6 +534,7 @@ def build_email_meta(
     today_change_pct: float,
     trading_date: str,
     sections: List[str],
+    currency: str = "USD",
 ) -> dict:
     tmpl = strategy_cfg["email"]["subject_template"]
     subject = tmpl.format(
@@ -523,10 +543,11 @@ def build_email_meta(
         nav=nav,
         today_change_pct=today_change_pct,
     )
+    sym = "NT$" if currency == "TWD" else "$"
     dashboard_url = f"{DASHBOARD_BASE_URL}/mvp_dashboard.html?a={account_id}"
     return {
         "subject":           subject,
-        "preheader":         f"帳戶 #{account_id} · {trading_date} · NAV ${nav:,.0f}",
+        "preheader":         f"帳戶 #{account_id} · {trading_date} · NAV {sym}{nav:,.0f}",
         "dashboard_url":     dashboard_url,
         "sections_rendered": sections,
     }
@@ -559,6 +580,7 @@ def write_data_json(
     回傳完整的 data dict。
     """
     ex = existing_data or {}
+    ccy = _account_currency(account)   # 依券商推幣別（TWD/USD），供 meta + 郵件 preheader
 
     # ── 事件 ─────────────────────────────────────────────────────────────────
     events = build_events(ex.get("events", []))
@@ -596,6 +618,7 @@ def write_data_json(
         strategy_start_date   = strategy_start,
         previous_strategy     = prev_strategy,
         trading_date          = trading_date,
+        currency              = ccy,
     )
 
     summary = build_summary(
@@ -637,6 +660,7 @@ def write_data_json(
         today_change_pct = summary["today_change_pct"],
         trading_date     = trading_date,
         sections         = email_sections,
+        currency         = ccy,
     )
 
     data = {

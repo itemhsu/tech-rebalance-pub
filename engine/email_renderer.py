@@ -33,9 +33,18 @@ def _pct(v: float) -> str:
     return f"{'+'if v>=0 else ''}{v:.2f}%"
 
 
-def _money(v: float) -> str:
+def _money(v: float, sym: str = "$") -> str:
     sign = "−" if v < 0 else ""
-    return f"${sign}{abs(v):,.2f}"
+    return f"{sym}{sign}{abs(v):,.2f}"
+
+
+def _currency_symbol(d: dict) -> str:
+    """與 dashboard resolveCurrency 對齊：meta.currency==TWD → NT$，其餘 → $。
+
+    缺欄位時預設 $（向後相容舊 data.json，不影響既有美股帳戶）。
+    """
+    code = (d.get("meta") or {}).get("currency") or "USD"
+    return "NT$" if code == "TWD" else "$"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -201,6 +210,7 @@ def _section_header(d: dict, accent: str) -> str:
 
 def _section_kpi(d: dict, accent: str) -> str:
     s = d["summary"]
+    sym = _currency_symbol(d)
     tc  = s["today_change"]
     tcp = s["today_change_pct"]
     twr = s["total_return_pct_twr"]
@@ -223,8 +233,8 @@ def _section_kpi(d: dict, accent: str) -> str:
     <tr><td style="padding:20px 20px 8px">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          {card("NAV 淨值", f"${s['nav']:,.0f}", f"現金 ${s['cash']:,.0f}")}
-          {card("今日損益", _pct(tcp), _money(tc), sub_color=_color(tc))}
+          {card("NAV 淨值", f"{sym}{s['nav']:,.0f}", f"現金 {sym}{s['cash']:,.0f}")}
+          {card("今日損益", _pct(tcp), _money(tc, sym), sub_color=_color(tc))}
         </tr>
         <tr>
           {card("總報酬 TWR", _pct(twr),
@@ -374,6 +384,7 @@ def _section_badges(d: dict, accent: str) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _section_positions(d: dict) -> str:
+    sym = _currency_symbol(d)
     rows = ""
     for i, p in enumerate(d["positions"]):
         bg   = "#f0fdf4" if p["in_portfolio"] else _BG
@@ -390,14 +401,14 @@ def _section_positions(d: dict) -> str:
           <td style="padding:8px 12px;text-align:right;font-size:13px;color:{_MUTED}">
             {int(p['qty'])} 股</td>
           <td style="padding:8px 12px;text-align:right;font-size:13px">
-            ${p['current_price']:,.2f}</td>
+            {sym}{p['current_price']:,.2f}</td>
           <td style="padding:8px 12px;text-align:right;font-size:13px">
             {p['weight']:.1f}%</td>
           <td style="padding:8px 12px;text-align:right;font-size:13px;
                      color:{plc};font-weight:600">
             {_pct(p['unrealized_plpc'])}</td>
           <td style="padding:8px 12px;text-align:right;font-size:12px;color:{plc}">
-            {_money(p['unrealized_pl'])}</td>
+            {_money(p['unrealized_pl'], sym)}</td>
         </tr>"""
 
     if not rows:
@@ -419,7 +430,7 @@ def _section_positions(d: dict) -> str:
             <th style="padding:8px 12px;text-align:right;font-size:11px;color:{_MUTED}">股價</th>
             <th style="padding:8px 12px;text-align:right;font-size:11px;color:{_MUTED}">權重</th>
             <th style="padding:8px 12px;text-align:right;font-size:11px;color:{_MUTED}">損益%</th>
-            <th style="padding:8px 12px;text-align:right;font-size:11px;color:{_MUTED}">損益$</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:{_MUTED}">損益{sym}</th>
           </tr>
         </thead>
         <tbody>{rows}</tbody>
@@ -433,14 +444,15 @@ def _section_positions(d: dict) -> str:
 
 def _section_rankings(d: dict) -> str:
     r = d["rankings"]
+    sym = _currency_symbol(d)
     if r["type"] == "market_cap_list":
-        return _rankings_market_cap(r)
+        return _rankings_market_cap(r, sym)
     elif r["type"] == "universe_groups":
-        return _rankings_universe_groups(r)
+        return _rankings_universe_groups(r, sym)
     return ""
 
 
-def _rankings_market_cap(r: dict) -> str:
+def _rankings_market_cap(r: dict, sym: str = "$") -> str:
     rows = ""
     for item in r["items"]:
         mark = "✓" if item["in_portfolio"] else ""
@@ -454,7 +466,7 @@ def _rankings_market_cap(r: dict) -> str:
             <span style="{mark_style};font-size:10px"> {mark}</span>
           </td>
           <td style="padding:6px 12px;text-align:right;font-size:13px">
-            ${item['price']:,.2f}</td>
+            {sym}{item['price']:,.2f}</td>
           <td style="padding:6px 12px;text-align:right;font-size:12px;
                      color:{_color(item['change_pct'])}">
             {_pct(item['change_pct'])}</td>
@@ -472,7 +484,7 @@ def _rankings_market_cap(r: dict) -> str:
     </td></tr>"""
 
 
-def _rankings_universe_groups(r: dict) -> str:
+def _rankings_universe_groups(r: dict, sym: str = "$") -> str:
     cols = ""
     for group in r["groups"]:
         rows = ""
@@ -488,7 +500,7 @@ def _rankings_universe_groups(r: dict) -> str:
                 <span style="{mc}">{mark}</span>
               </td>
               <td style="padding:4px 8px;text-align:right;font-size:11px">
-                ${item['price']:,.0f}</td>
+                {sym}{item['price']:,.0f}</td>
               <td style="padding:4px 8px;text-align:right;font-size:11px;
                          color:{_color(item['change_pct'])}">
                 {_pct(item['change_pct'])}</td>
@@ -520,6 +532,7 @@ def _rankings_universe_groups(r: dict) -> str:
 
 def _section_events(d: dict) -> str:
     today  = d["meta"]["trading_date"]
+    sym    = _currency_symbol(d)
     events = [e for e in d.get("events", []) if e["date"] == today]
     if not events:
         return ""
@@ -538,7 +551,7 @@ def _section_events(d: dict) -> str:
         if e["type"] in ("deposit", "withdrawal"):
             amt    = e.get("amount", 0)
             sign   = "+" if amt >= 0 else ""
-            detail = f" {sign}${abs(amt):,.0f}"
+            detail = f" {sign}{sym}{abs(amt):,.0f}"
         elif e["type"] == "strategy_switch":
             detail = f" {e.get('from_strategy','?')}→{e.get('to_strategy','?')}"
         note_html = ""
@@ -583,6 +596,7 @@ def _section_trades(d: dict) -> str:
     log = d.get("trade_log", [])
     if not log:
         return ""
+    sym = _currency_symbol(d)
     today_log = log[0]   # 最新一筆（降序）
     orders    = today_log.get("orders", [])
     count     = today_log.get("trades_count", 0)
@@ -606,7 +620,7 @@ def _section_trades(d: dict) -> str:
           <td style="padding:6px 12px;text-align:right;font-size:13px">
             {o['qty']:.0f} 股</td>
           <td style="padding:6px 12px;text-align:right;font-size:13px">
-            @${o['price']:,.2f}</td>
+            @{sym}{o['price']:,.2f}</td>
         </tr>"""
 
     return f"""

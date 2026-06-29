@@ -170,6 +170,34 @@ def should_snapshot_on_skip(trigger_code: str, dry_run: bool) -> bool:
     return trigger_code != "non_trading_day"
 
 
+def compute_cash_deployment_orders(positions, prices, nav, cash):
+    """非換股日：把閒置現金部署進『現有持倉』，不換股。
+
+    重用 portfolio.calculate_rebalance（top10 = 現有持倉 → 無進出；超帶才動），
+    只保留把現金部署進現有持倉的 BUY 訂單：
+      - weight_adjust：入金後全體低於目標權重（偏離 >容忍帶）時的補倉買單。
+      - cash_deployment：權重在容忍帶內、純閒置現金均分時的買單。
+    排除 exit_top10 / new_entrant（組合異動，本函式不換股），並排除任何 SELL
+    （入金日只買不賣，避免 churn）。
+    """
+    import portfolio as pf
+    if not positions:
+        return []
+    held = [p.symbol for p in positions]
+    target_weight = 1.0 / max(len(held), 1)
+    orders = pf.calculate_rebalance(
+        current_positions=positions,
+        top10_symbols=held,
+        current_prices=prices,
+        account_nav=nav,
+        available_cash=cash,
+        target_weight=target_weight,
+        trigger="cash_deployment_only",
+    )
+    return [o for o in orders
+            if o.action == "BUY" and o.reason in ("weight_adjust", "cash_deployment")]
+
+
 def _save_nav_snapshot(client, data_dir, today, log) -> None:
     """非換股日：抓當前 NAV/持倉、保留上次選股/排名，存 state（未交易）。"""
     import json

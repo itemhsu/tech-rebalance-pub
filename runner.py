@@ -224,6 +224,47 @@ def _save_nav_snapshot(client, data_dir, today, log) -> None:
     log.info("非換股日：NAV 快照已更新（未交易）→ %s", data_dir)
 
 
+def _maybe_deploy_idle_cash(spec, client, data_dir, today, account_id, strategy_id, dry_run, log) -> bool:
+    """非換股日：若有閒置現金（> NAV×門檻），把現金部署進現有持倉（不換股、不 re-pick）。
+    回傳 True 表示已處理（已部署或無單但走過部署路徑）；False 表示無閒置現金 → 交給 NAV 快照。
+    """
+    import portfolio as pf
+    nav, cash = client.get_account_nav()
+    if nav <= 0 or cash <= nav * pf.CASH_DEPLOY_THRESH:
+        return False
+    positions = client.get_current_positions()
+    if not positions:
+        return False
+    held = [p.symbol for p in positions]
+    prices = client.get_latest_prices(held)
+    orders = compute_cash_deployment_orders(positions=positions, prices=prices, nav=nav, cash=cash)
+    if not orders:
+        return False
+    log.info("非換股日現金部署：閒置現金 $%.2f → %d 筆 BUY（不換股）", cash, len(orders))
+    import trader as tr
+    tr.execute_rebalance(client, orders, dry_run=dry_run,
+                         account_id=account_id, strategy=strategy_id)
+    if not dry_run:
+        from pathlib import Path
+        import json
+        dd = Path(data_dir); dd.mkdir(parents=True, exist_ok=True)
+        nav2, cash2 = client.get_account_nav()
+        positions2 = client.get_current_positions()
+        prev = {}
+        p = dd / "portfolio_state.json"
+        if p.exists():
+            try: prev = json.loads(p.read_text(encoding="utf-8"))
+            except Exception: prev = {}
+        state = pf.PortfolioState(
+            date=today.isoformat(), nav=nav2, cash=cash2, positions=positions2,
+            top10=prev.get("top10") or [], orders_executed=orders,
+            ranked_stocks=prev.get("ranked_stocks") or [])
+        pf.save_state(state, path=p)
+        pf.append_history(state, path=dd / "portfolio_state_history.json")
+        log.info("非換股日現金部署：state 已更新 → %s", dd)
+    return True
+
+
 def apply_force_override(should_run: bool, trigger_code: str) -> tuple[bool, bool, str]:
     """FORCE_REBALANCE=true 時覆蓋頻率守門（手動驗證下單 / 臨時手動換股）。
 
@@ -327,9 +368,12 @@ def run(
         # 交易日但非換股日 → 仍更新 NAV 快照，讓每日報告新鮮（只是不交易）
         if should_snapshot_on_skip(trigger_code, dry_run):
             try:
-                _save_nav_snapshot(client, data_dir, today, log)
+                # 交易日但非換股日：先嘗試部署閒置現金（還原 §17）；無閒置現金才落回純快照
+                if not _maybe_deploy_idle_cash(spec, client, data_dir, today,
+                                               account_id, strategy_id, dry_run, log):
+                    _save_nav_snapshot(client, data_dir, today, log)
             except Exception as e:  # noqa: BLE001
-                log.warning("非換股日 NAV 快照失敗：%s", e)
+                log.warning("非換股日現金部署/快照失敗：%s", e)
         return 0
 
     log.info("守門通過，trigger=%s", trigger_code)

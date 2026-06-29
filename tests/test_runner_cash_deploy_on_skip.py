@@ -57,3 +57,46 @@ def test_no_idle_cash_no_orders():
 
 def test_empty_positions_no_orders():
     assert runner.compute_cash_deployment_orders(positions=[], prices={}, nav=1000.0, cash=500.0) == []
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Tests for _maybe_deploy_idle_cash
+# ────────────────────────────────────────────────────────────────────────
+
+class _FakeClient:
+    def __init__(self, nav, cash, syms, px):
+        self._nav, self._cash, self._syms, self._px = nav, cash, syms, px
+        self.executed = None
+    def get_account_nav(self): return (self._nav, self._cash)
+    def get_current_positions(self):
+        from portfolio import Position
+        q = (self._nav - self._cash) / len(self._syms) / 100.0
+        return [Position(symbol=s, qty=q, avg_entry_price=100.0, current_price=100.0,
+                         market_value=q*100.0, unrealized_pl=0.0, unrealized_plpc=0.0) for s in self._syms]
+    def get_latest_prices(self, syms): return {s: self._px for s in syms}
+
+
+def test_maybe_deploy_idle_cash_deploys(monkeypatch, tmp_path):
+    import runner, trader
+    syms = ["AAPL","MSFT","NVDA","AMZN","GOOGL","META","AVGO","TSM","AMD","ASML"]
+    cli = _FakeClient(nav=28158.0, cash=9146.0, syms=syms, px=100.0)
+    captured = {}
+    monkeypatch.setattr(trader, "execute_rebalance",
+        lambda client, orders, dry_run=False, **k: captured.setdefault("orders", orders) or [])
+    import logging; log = logging.getLogger("t")
+    deployed = runner._maybe_deploy_idle_cash(
+        spec={}, client=cli, data_dir=str(tmp_path), today=__import__("datetime").date(2026,6,26),
+        account_id="3", strategy_id="mom_6m_t20", dry_run=True, log=log)
+    assert deployed is True
+    assert captured["orders"], "應送出部署訂單"
+    assert all(o.action == "BUY" for o in captured["orders"])
+
+
+def test_maybe_deploy_idle_cash_low_cash_returns_false(tmp_path):
+    import runner, logging
+    syms = ["AAPL","MSFT"]
+    cli = _FakeClient(nav=10050.0, cash=50.0, syms=syms, px=100.0)  # cash < 1% NAV
+    deployed = runner._maybe_deploy_idle_cash(
+        spec={}, client=cli, data_dir=str(tmp_path), today=__import__("datetime").date(2026,6,26),
+        account_id="3", strategy_id="mom_6m_t20", dry_run=True, log=logging.getLogger("t"))
+    assert deployed is False

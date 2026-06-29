@@ -163,6 +163,12 @@ class BrokerClient(ABC):
             ))
         return out
 
+    def get_cash_flows(self, since: str) -> list:
+        """[compat] 外部現金流（入金/出金）事件；預設無（非 Alpaca 券商如永豐回 []）。
+        回傳 [{"date": "YYYY-MM-DD", "type": "deposit"|"withdrawal", "amount": <正數>}]。
+        """
+        return []
+
     # ── 共用 helpers ─────────────────────────────────────────────────────
 
     def check_capability(self, key: str, value: Any) -> None:

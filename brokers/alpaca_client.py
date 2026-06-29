@@ -259,3 +259,28 @@ class AlpacaClient(BrokerClient):
         resp = self._request("GET", url, params={"status": "open", "limit": 500})
         data = self._check_resp(resp, "get_open_orders")
         return data if isinstance(data, list) else []
+
+    def get_cash_flows(self, since: str) -> list:
+        """外部現金流（入金/出金）：Alpaca Account Activities（CSD/CSW/JNLC）。
+
+        since: ISO 日期 'YYYY-MM-DD'。回 [{date, type: deposit|withdrawal, amount(正數)}]。
+        """
+        url = f"{self.base_url}/v2/account/activities"
+        resp = self._request("GET", url,
+                             params={"activity_types": "CSD,CSW,JNLC", "after": since})
+        acts = resp.json() or []
+        out = []
+        for a in acts:
+            t = (a.get("activity_type") or "").upper()
+            try:
+                amt = float(a.get("net_amount") or 0)
+            except (TypeError, ValueError):
+                continue
+            if amt == 0:
+                continue
+            day = a.get("date") or (a.get("transaction_time") or "")[:10]
+            if t == "CSD" or (t == "JNLC" and amt > 0):
+                out.append({"date": day, "type": "deposit", "amount": abs(amt)})
+            elif t == "CSW" or (t == "JNLC" and amt < 0):
+                out.append({"date": day, "type": "withdrawal", "amount": abs(amt)})
+        return out

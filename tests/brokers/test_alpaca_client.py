@@ -177,3 +177,38 @@ def test_place_unsupported_order_type():
     """傳不在 capabilities.order_types 的 type → BrokerCapabilityError，不送 API。"""
     with pytest.raises(BrokerCapabilityError, match="order_types"):
         _client().place_order("AAPL", 1, "buy", order_type="iceberg")
+
+
+# ── 現金流（Task B1）──────────────────────────────────────────────────────
+@responses.activate
+def test_get_cash_flows_parses_deposits_and_withdrawals():
+    responses.add(
+        responses.GET, f"{PAPER}/v2/account/activities",
+        json=[
+            {"activity_type": "CSD", "net_amount": "9476.00", "date": "2026-06-23"},
+            {"activity_type": "CSW", "net_amount": "-100.00", "date": "2026-06-20"},
+            {"activity_type": "JNLC", "net_amount": "500.00", "date": "2026-06-21"},
+            {"activity_type": "FILL", "net_amount": "0", "date": "2026-06-22"},
+        ], status=200)
+    flows = _client().get_cash_flows("2026-06-19")
+    assert {"date": "2026-06-23", "type": "deposit", "amount": 9476.0} in flows
+    assert {"date": "2026-06-20", "type": "withdrawal", "amount": 100.0} in flows
+    assert {"date": "2026-06-21", "type": "deposit", "amount": 500.0} in flows
+    assert len(flows) == 3   # FILL (net 0 / not cash) ignored
+
+
+def test_base_get_cash_flows_defaults_empty():
+    # 非 Alpaca 券商（base 預設）→ 回 []
+    from brokers.base import BrokerClient
+    # minimal concrete subclass implementing only the abstract methods as no-ops
+    class _Dummy(BrokerClient):
+        def is_trading_day(self, d=None): return True
+        def get_account_balance(self): raise NotImplementedError
+        def get_positions(self): return []
+        def get_latest_prices(self, s): return {}
+        def place_order(self, *a, **k): raise NotImplementedError
+        def cancel_all_open_orders(self): return 0
+        def wait_for_fills(self, *a, **k): return None
+    # construct without network: bypass __init__ if it requires config
+    d = _Dummy.__new__(_Dummy)
+    assert d.get_cash_flows("2026-01-01") == []

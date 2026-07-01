@@ -170,32 +170,6 @@ def should_snapshot_on_skip(trigger_code: str, dry_run: bool) -> bool:
     return trigger_code != "non_trading_day"
 
 
-def compute_cash_deployment_orders(positions, prices, nav, cash):
-    """非換股日：把閒置現金部署進『現有持倉』，不換股。
-
-    重用 portfolio.calculate_rebalance（top10 = 現有持倉 → 無進出；超帶才動），
-    只保留把現金部署進現有持倉的 BUY 訂單：
-      - weight_adjust：入金後全體低於目標權重（偏離 >容忍帶）時的補倉買單。
-      - cash_deployment：權重在容忍帶內、純閒置現金均分時的買單。
-    排除 exit_top10 / new_entrant（組合異動，本函式不換股），並排除任何 SELL
-    （入金日只買不賣，避免 churn）。
-    """
-    import portfolio as pf
-    if not positions:
-        return []
-    held = [p.symbol for p in positions]
-    target_weight = 1.0 / max(len(held), 1)
-    orders = pf.calculate_rebalance(
-        current_positions=positions,
-        top10_symbols=held,
-        current_prices=prices,
-        account_nav=nav,
-        available_cash=cash,
-        target_weight=target_weight,
-        trigger="cash_deployment_only",
-    )
-    return [o for o in orders
-            if o.action == "BUY" and o.reason in ("weight_adjust", "cash_deployment")]
 
 
 def compute_deploy_into_picks(positions, picks, prices, nav, cash):
@@ -268,23 +242,42 @@ def _save_nav_snapshot(client, data_dir, today, log) -> None:
     log.info("非換股日：NAV 快照已更新（未交易）→ %s", data_dir)
 
 
+def _select_current_picks(spec, client, log):
+    """跑一次選股，回 (picks, prices)。給非換股日現金部署用（與主路徑同邏輯）。"""
+    from engine.selection import required_factors, select_portfolio
+    market = "tw" if (getattr(client, "spec", {}) or {}).get(
+        "market", {}).get("currency") == "TWD" else "us"
+    groups = load_universe_groups(spec, market)
+    all_syms = sorted({s for g in groups.values() for s in g})
+    needed = required_factors(spec)
+    factor_values = fetch_factor_values(
+        needed, all_syms,
+        api_key=getattr(client, "api_key", ""),
+        api_secret=getattr(client, "api_secret", ""),
+        market=market)
+    valid = set((factor_values.get("price") or {}).keys())
+    picks = select_portfolio(spec, groups, factor_values, valid_symbols=valid)
+    prices = factor_values.get("price", {}) or {}
+    log.info("現金部署選股：%d 檔 → %s", len(picks), picks)
+    return picks, prices
+
+
 def _maybe_deploy_idle_cash(spec, client, data_dir, today, account_id, strategy_id, dry_run, log) -> bool:
-    """非換股日：若有閒置現金（> NAV×門檻），把現金部署進現有持倉（不換股、不 re-pick）。
+    """非換股日：若有閒置現金（> NAV×門檻），把現金投進當前選股（只買不賣，不碰舊持倉）。
     回傳 True 表示已處理（已部署或無單但走過部署路徑）；False 表示無閒置現金 → 交給 NAV 快照。
     """
     import portfolio as pf
     nav, cash = client.get_account_nav()
     if nav <= 0 or cash <= nav * pf.CASH_DEPLOY_THRESH:
         return False
-    positions = client.get_current_positions()
-    if not positions:
+    picks, prices = _select_current_picks(spec, client, log)
+    if not picks:
         return False
-    held = [p.symbol for p in positions]
-    prices = client.get_latest_prices(held)
-    orders = compute_cash_deployment_orders(positions=positions, prices=prices, nav=nav, cash=cash)
+    positions = client.get_current_positions()
+    orders = compute_deploy_into_picks(positions, picks, prices, nav, cash)
     if not orders:
         return False
-    log.info("非換股日現金部署：閒置現金 $%.2f → %d 筆 BUY（不換股）", cash, len(orders))
+    log.info("非換股日現金部署：閒置現金 $%.2f → %d 筆 BUY（投進當前選股，不動舊持倉）", cash, len(orders))
     import trader as tr
     tr.execute_rebalance(client, orders, dry_run=dry_run,
                          account_id=account_id, strategy=strategy_id)

@@ -198,6 +198,50 @@ def compute_cash_deployment_orders(positions, prices, nav, cash):
             if o.action == "BUY" and o.reason in ("weight_adjust", "cash_deployment")]
 
 
+def compute_deploy_into_picks(positions, picks, prices, nav, cash):
+    """非換股日：把閒置現金投進『當前選股』，只買不賣，不碰不在選股內的舊持倉。
+
+    - 目標：每個 pick 等權 nav/N。
+    - 對每個 pick 算不足額 gap = 目標 - 現有市值，只取正的（低於目標才買；不賣、不動超重）。
+    - 預算 = cash × (1 - buffer)；不足時按 gap 比例縮，避免超買。
+    - 未持有的 pick → reason=new_entrant；已持有但不足 → weight_adjust。只回 BUY。
+    - 不在 picks 的舊持倉完全不出現在訂單。
+    """
+    import math
+    import portfolio as pf
+    if not picks or nav <= 0 or cash <= nav * pf.CASH_DEPLOY_THRESH:
+        return []
+    target_val = nav / len(picks)
+    pos_val = {p.symbol: p.market_value for p in positions}
+    gaps = {}
+    for s in picks:
+        g = target_val - pos_val.get(s, 0.0)
+        if g > 0:
+            gaps[s] = g
+    if not gaps:
+        return []
+    budget = cash * (1 - pf.CASH_BUFFER_PCT)
+    total_gap = sum(gaps.values())
+    scale = min(1.0, budget / total_gap) if total_gap > 0 else 0.0
+    orders = []
+    for s in picks:
+        if s not in gaps:
+            continue
+        px = prices.get(s, 0.0)
+        if px <= 0:
+            continue
+        qty = math.floor((gaps[s] * scale) / px)
+        val = qty * px
+        if val < pf.MIN_ORDER_VALUE:
+            continue
+        held = pos_val.get(s, 0.0)
+        orders.append(pf.RebalanceOrder(
+            symbol=s, action="BUY", qty=qty,
+            reason=("new_entrant" if held == 0 else "weight_adjust"),
+            estimated_value=val, trigger="cash_deploy_into_picks"))
+    return orders
+
+
 def _save_nav_snapshot(client, data_dir, today, log) -> None:
     """非換股日：抓當前 NAV/持倉、保留上次選股/排名，存 state（未交易）。"""
     import json

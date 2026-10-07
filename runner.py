@@ -384,6 +384,15 @@ def run(
         log.error("建立 broker 客戶端失敗：%s", e)
         return 1
 
+    # ── Step 2b: 同步外部現金流（入金/出金）→ data_dir/cash_flows.json ──────
+    # 守門前做：非換股日/非交易日也會補到，report_generator 才能把入金從 TWR 剝離。
+    # 永不阻斷每日流程（券商不支援或出錯 → 記 warning、沿用舊檔）。
+    try:
+        from engine.cashflow import sync_cash_flows
+        sync_cash_flows(client, data_dir, log)
+    except Exception as e:  # noqa: BLE001
+        log.warning("現金流同步略過：%s", e)
+
     # ── Step 3: 今日 + 守門 ─────────────────────────────────────────
     today = date.fromisoformat(date_override) if date_override else date.today()
     should_run, trigger_code = gate_check(spec, client, today, dry_run)

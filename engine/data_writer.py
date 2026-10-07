@@ -27,6 +27,7 @@ from engine.twr import (
     compute_twr, compute_net_contribution,
     compute_totals, compute_investment_gain,
 )
+from engine.cashflow import net_flow_on
 from engine.accounts      import Account, get_same_strategy_accounts
 from engine.strategy_card import build_strategy_card
 
@@ -106,7 +107,9 @@ def build_summary(
     today = trading_date or date.today().isoformat()
 
     # 今日損益
-    today_change     = nav - prev_nav if prev_nav is not None else 0.0
+    # 今日損益：扣掉當日淨入金/出金（入金當天不是「賺了」+44%）
+    flow_today       = net_flow_on(events, today)
+    today_change     = (nav - prev_nav - flow_today) if prev_nav is not None else 0.0
     today_change_pct = (today_change / prev_nav * 100) if prev_nav and prev_nav != 0 else 0.0
 
     # 報酬率

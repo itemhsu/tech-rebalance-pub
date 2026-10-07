@@ -199,6 +199,13 @@ def order_alerts(data_dir: str, days: int = 3) -> list:
     return out[-10:]
 
 
+def account_events(data_dir: str, nav_history: List[dict]) -> List[dict]:
+    """帳戶的入金/出金事件（runner 同步到 data_dir/cash_flows.json）→ TWR 切期用。
+    沒有檔案 → []（舊行為）。"""
+    from engine.cashflow import load_cash_flows, flows_to_events
+    return flows_to_events(load_cash_flows(ROOT / data_dir), nav_history)
+
+
 def can_generate(account: Account) -> bool:
     """此帳戶能否走泛用產生器。分組排名已通用化（讀 latest_rankings.json），
     故只要策略 JSON 載得起來即可——不再有「分組要靠 migrator」的例外。"""
@@ -246,7 +253,8 @@ def generate_for_account(account: Account, output_dir: Path,
         "meta": {"strategy_start_date": nav_history[0]["date"] if nav_history else today},
         "nav_history": nav_history[:-1] if len(nav_history) > 1 else [],
         "trade_log":   trade_log,
-        "events":      [],
+        # 入金/出金事件（cash_flows.json，由 runner 同步）→ TWR 不把入金算成報酬
+        "events":      account_events(data_dir, nav_history),
     }
 
     output_path = output_dir / account.id / "data.json"

@@ -365,6 +365,23 @@ class RestBrokerClient(BrokerClient):
                              order_type="market", time_in_force=time_in_force)
         return r.raw or {"id": r.order_id, "status": r.status}
 
+    def get_cash_flows(self, since: str) -> list:
+        """外部現金流（入金/出金）。spec.endpoints.account_activities 宣告才抓（Alpaca 形狀：
+        activity_types=CSD,CSW,JNLC&after=<since>）；未宣告的券商 → []（base 預設行為）。
+
+        註：生產環境對 alpaca 建的是本類別（spec 無 client_class），不是 AlpacaClient；
+        2026-10-07 之前本方法缺席 → cash_flows.json 永遠空 → TWR 把入金當報酬。
+        """
+        ep = self.endpoints.get("account_activities")
+        if not ep:
+            return []
+        from brokers.cashflows import ALPACA_CASH_ACTIVITY_TYPES, parse_alpaca_activities
+        url = f"{self.base_url}{self._ep('account_activities')}"
+        resp = self._request("GET", url,
+                             params={"activity_types": ALPACA_CASH_ACTIVITY_TYPES, "after": since})
+        data = self._check_resp(resp, "get_cash_flows")
+        return parse_alpaca_activities(data if isinstance(data, list) else [])
+
     def get_open_orders(self) -> list:
         url = f"{self.base_url}{self._ep('orders')}"
         resp = self._request("GET", url, params={"status": "open"})

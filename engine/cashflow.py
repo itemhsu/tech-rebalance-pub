@@ -23,6 +23,7 @@ from typing import List, Optional
 _FILE = "cash_flows.json"
 _WIDE_SINCE = "2000-01-01"     # 無歷史時的保底起點（券商活動量小，全抓無妨）
 _FLOW_TYPES = ("deposit", "withdrawal")
+MIN_FLOW = 1.0                 # USD；低於此視為雜訊（如 Juneteenth 保證金補貼 $0.06）
 
 
 def load_cash_flows(data_dir: Path | str) -> List[dict]:
@@ -52,7 +53,7 @@ def _inception_date(data_dir: Path) -> Optional[str]:
 
 
 def _normalize(flows: list) -> List[dict]:
-    """只留 deposit/withdrawal、amount 取正數、依 (date,type,amount) 去重、日期排序。"""
+    """只留 deposit/withdrawal、amount 取正數且 ≥ MIN_FLOW、依 (date,type,amount) 去重、日期排序。"""
     seen = set()
     out = []
     for f in flows or []:
@@ -63,7 +64,7 @@ def _normalize(flows: list) -> List[dict]:
         except (TypeError, ValueError):
             continue
         day = str(f.get("date") or "")[:10]
-        if amt <= 0 or not day:
+        if amt < MIN_FLOW or not day:
             continue
         key = (day, f["type"], amt)
         if key in seen:

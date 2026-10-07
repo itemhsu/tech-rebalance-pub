@@ -265,22 +265,8 @@ class AlpacaClient(BrokerClient):
 
         since: ISO 日期 'YYYY-MM-DD'。回 [{date, type: deposit|withdrawal, amount(正數)}]。
         """
+        from brokers.cashflows import ALPACA_CASH_ACTIVITY_TYPES, parse_alpaca_activities
         url = f"{self.base_url}/v2/account/activities"
         resp = self._request("GET", url,
-                             params={"activity_types": "CSD,CSW,JNLC", "after": since})
-        acts = resp.json() or []
-        out = []
-        for a in acts:
-            t = (a.get("activity_type") or "").upper()
-            try:
-                amt = float(a.get("net_amount") or 0)
-            except (TypeError, ValueError):
-                continue
-            if amt == 0:
-                continue
-            day = a.get("date") or (a.get("transaction_time") or "")[:10]
-            if t == "CSD" or (t == "JNLC" and amt > 0):
-                out.append({"date": day, "type": "deposit", "amount": abs(amt)})
-            elif t == "CSW" or (t == "JNLC" and amt < 0):
-                out.append({"date": day, "type": "withdrawal", "amount": abs(amt)})
-        return out
+                             params={"activity_types": ALPACA_CASH_ACTIVITY_TYPES, "after": since})
+        return parse_alpaca_activities(resp.json() or [])

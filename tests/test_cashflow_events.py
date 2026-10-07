@@ -184,3 +184,11 @@ def test_runner_syncs_cash_flows_before_gate(tmp_path, monkeypatch):
                     dry_run=False, date_override="2026-10-11")  # 週六
     assert rc == 0
     assert cashflow.load_cash_flows(tmp_path)[0]["amount"] == pytest.approx(_DEPOSIT)
+
+
+# ── 雜訊：$1 以下的 JNLC（如 Juneteenth 保證金補貼 $0.06）不當入金事件 ────────
+def test_normalize_drops_sub_dollar_noise():
+    flows = [{"date": "2026-08-17", "type": "deposit", "amount": 0.06},
+             {"date": "2026-06-23", "type": "deposit", "amount": _DEPOSIT}]
+    ev = cashflow.flows_to_events(flows, _HIST)
+    assert [e["date"] for e in ev] == ["2026-06-23"]

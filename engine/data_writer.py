@@ -346,9 +346,12 @@ def _drawdown_series(navs: List[float]) -> List[float]:
     if not navs:
         return []
     result = []
-    peak = navs[0]
+    peak = None
     for n in navs:
-        if n > peak:
+        if n is None:                 # 基準缺值（yfinance 無該日資料）→ 該點 None，不動 peak
+            result.append(None)
+            continue
+        if peak is None or n > peak:
             peak = n
         dd = (n / peak - 1) * 100 if peak > 0 else 0.0
         result.append(dd)

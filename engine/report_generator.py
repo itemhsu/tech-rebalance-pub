@@ -262,6 +262,14 @@ def generate_for_account(account: Account, output_dir: Path,
         logger.info("DRY RUN：略過 #%s", account.id)
         return "ok"
 
+    # 基準 NAV（yfinance，與 nav_history 逐日對齊）→ 同時供「NAV/TWR 走勢」與「回撤對比」。
+    # 回撤不再讀 data/benchmark_365_cache.json（舊 dashboard.py 寫的，2026-05-28 後沒人更新、
+    # nasdaq 全空 → 圖上 S&P500 只到 5/27、NASDAQ 全缺）；快取只在 yfinance 失敗時當後援。
+    init_nav  = nav_history[0]["nav"] if nav_history else state["nav"]
+    bench_nav = _compute_benchmark_nav(nav_history, init_nav) or {}
+    benchmark_data = ({"SPY": bench_nav["sp500"], "QQQ": bench_nav["nasdaq"]}
+                      if bench_nav.get("sp500") and bench_nav.get("nasdaq") else None)
+
     data = write_data_json(
         output_path           = output_path,
         strategy_cfg          = strat,
@@ -276,15 +284,14 @@ def generate_for_account(account: Account, output_dir: Path,
         trading_date          = today,
         dry_run               = False,
         existing_data         = existing_data,
+        benchmark_data        = benchmark_data,
     )
-    bench = _load_benchmark_drawdown()
-    if bench:
-        all_nav = data.get("nav_history", [])
-        sp500_dd, nasdaq_dd = _align_benchmark(all_nav, bench)
-        data["drawdown"]["sp500"]  = [round(v, 4) if v is not None else None for v in sp500_dd]
-        data["drawdown"]["nasdaq"] = [round(v, 4) if v is not None else None for v in nasdaq_dd]
-    init_nav = nav_history[0]["nav"] if nav_history else state["nav"]
-    bench_nav = _compute_benchmark_nav(data.get("nav_history", []), init_nav)
+    if benchmark_data is None:
+        bench = _load_benchmark_drawdown()          # 後援：過期快取總比全空好
+        if bench:
+            sp500_dd, nasdaq_dd = _align_benchmark(data.get("nav_history", []), bench)
+            data["drawdown"]["sp500"]  = [round(v, 4) if v is not None else None for v in sp500_dd]
+            data["drawdown"]["nasdaq"] = [round(v, 4) if v is not None else None for v in nasdaq_dd]
     if bench_nav:
         data["benchmark_nav"] = bench_nav
     # 帳戶生命週期：歷經多策略 → 附策略歷史時間軸（報告渲染「策略歷史」表）

@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - name: Install engine (public repo, no token)
-        run: pip install "tech-rebalance @ git+https://github.com/itemhsu/tech-rebalance-pub@{version}"
+        run: pip install "tech-rebalance @ git+https://github.com/itemhsu/tech-rebalance-pub@${{ vars.ENGINE_VERSION || '{version}' }}"
       - name: Install SinoPac SDK (台股下單)
         run: pip install shioaji
       - name: Run TW accounts

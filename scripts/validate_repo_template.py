@@ -10,6 +10,7 @@
   V5      每個 render 的 src 在 templates/ 真存在
   V6      templates/ 每個檔都被某個 render 引用（無孤兒）← 核心防護
   V7      path 不含 '..'、不以 '/' 開頭（路徑逃逸）
+  V8      範本不得把引擎釘死在 `pub@{version}`；必須走 `vars.ENGINE_VERSION`（{version} 只當後援）
 """
 from __future__ import annotations
 
@@ -84,6 +85,17 @@ def main() -> int:
                 rel = str(f.relative_to(ROOT))
                 if rel not in referenced_srcs:
                     errors.append(f"孤兒範本（templates/ 有檔但無 render 引用）：{rel}")
+
+    # ── V8 引擎版本不得被渲染釘死 ────────────────────────────────────────
+    # sync(render) 把 {version} 換成 release tag；若範本寫 `pub@{version}`，
+    # 重渲染就會蓋掉 repo 的 vars.ENGINE_VERSION 控制（2026-10 事故：TW workflow
+    # 被釘回 v1.0.21，用舊引擎覆蓋所有帳戶 dashboard）。
+    if TEMPLATES_DIR.is_dir():
+        for f in TEMPLATES_DIR.rglob("*.yml"):
+            txt = f.read_text(encoding="utf-8")
+            if "tech-rebalance-pub@{version}" in txt:
+                errors.append(f"{f.relative_to(ROOT)}：引擎被釘死 pub@{{version}}，"
+                              "請改 ${{ vars.ENGINE_VERSION || '{version}' }}")
 
     # ── 結果 ─────────────────────────────────────────────────────────────
     if errors:

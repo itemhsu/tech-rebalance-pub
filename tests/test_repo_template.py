@@ -103,3 +103,24 @@ def test_no_orphan_templates():
         for f in tdir.rglob("*"):
             if f.is_file():
                 assert str(f.relative_to(ROOT)) in referenced, f"orphan {f}"
+
+
+def test_v8_templates_use_engine_version_var_not_pinned():
+    """範本的引擎安裝必須走 vars.ENGINE_VERSION；{version} 只能當後援。
+    模擬 sync(render)（純字串替換 {version}）後，結果仍受 ENGINE_VERSION 控制。"""
+    tdir = ROOT / "templates"
+    found = 0
+    for f in tdir.glob("*.yml"):
+        txt = f.read_text(encoding="utf-8")
+        assert "tech-rebalance-pub@{version}" not in txt, f"{f.name} 把引擎釘死"
+        if "tech-rebalance-pub@" in txt:
+            found += 1
+            rendered = txt.replace("{version}", "v9.9.9")
+            assert "pub@${{ vars.ENGINE_VERSION || 'v9.9.9' }}" in rendered, f.name
+    assert found >= 4
+
+
+def test_v8_validator_passes_on_repo():
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "validate_repo_template.py")],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout + r.stderr

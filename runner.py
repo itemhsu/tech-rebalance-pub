@@ -178,6 +178,7 @@ def compute_deploy_into_picks(positions, picks, prices, nav, cash):
     - 目標：每個 pick 等權 nav/N。
     - 對每個 pick 算不足額 gap = 目標 - 現有市值，只取正的（低於目標才買；不賣、不動超重）。
     - 預算 = cash × (1 - buffer)；不足時按 gap 比例縮，避免超買。
+    - 第二輪：整股取整殘留，貪婪補 1 股給剩餘缺口最大者（缺口≥股價且預算夠）。
     - 未持有的 pick → reason=new_entrant；已持有但不足 → weight_adjust。只回 BUY。
     - 不在 picks 的舊持倉完全不出現在訂單。
     """
@@ -197,15 +198,34 @@ def compute_deploy_into_picks(positions, picks, prices, nav, cash):
     budget = cash * (1 - pf.CASH_BUFFER_PCT)
     total_gap = sum(gaps.values())
     scale = min(1.0, budget / total_gap) if total_gap > 0 else 0.0
-    orders = []
-    for s in picks:
-        if s not in gaps:
-            continue
+    # 第一輪：按比例縮後整股取整
+    qtys = {}
+    for s in gaps:
         px = prices.get(s, 0.0)
         if px <= 0:
             continue
-        qty = math.floor((gaps[s] * scale) / px)
-        val = qty * px
+        qtys[s] = math.floor((gaps[s] * scale) / px)
+
+    # 第二輪（v1.0.29）：貪婪補殘留。整股取整會留下大量現金；
+    # 每次挑「剩餘缺口最大」的 pick 補 1 股，條件：剩餘缺口 ≥ 股價（不超買目標）
+    # 且剩餘預算 ≥ 股價（不超出現金）。直到沒有可補者。
+    remaining = budget - sum(q * prices[s] for s, q in qtys.items())
+    while True:
+        cands = [s for s in qtys
+                 if gaps[s] - qtys[s] * prices[s] >= prices[s]
+                 and prices[s] <= remaining + 1e-9]
+        if not cands:
+            break
+        best = max(cands, key=lambda s: (gaps[s] - qtys[s] * prices[s], -picks.index(s)))
+        qtys[best] += 1
+        remaining -= prices[best]
+
+    orders = []
+    for s in picks:
+        qty = qtys.get(s, 0)
+        if qty <= 0:
+            continue
+        val = qty * prices[s]
         if val < pf.MIN_ORDER_VALUE:
             continue
         held = pos_val.get(s, 0.0)
